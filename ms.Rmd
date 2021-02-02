@@ -1,22 +1,21 @@
 ---
-title: "Methods and Results"
-author: 
-date: "`r Sys.Date()`"
-bibliography: refs.bib
-csl: science.csl
-output: 
-  bookdown::html_document2:
-    code_folding: hide
-    number_sections: no
-    toc: yes
-    toc_depth: 6
-    toc_float: yes
-    bibliography: refs.bib
-  bookdown::word_document2:
-    toc: no
-    toc_depth: 6
-    number_sections: true
-    reference_docx: template.docx
-editor_options: 
-  chunk_output_type: console
+  title: "Methods and Results"
+  author: 
+  date: "`r Sys.Date()`"
+  bibliography: refs.bib
+  csl: science.csl
+  output: 
+    bookdown::html_document2:
+      code_folding: hide
+      number_sections: no
+      toc: yes
+      toc_depth: 6
+      toc_float: yes
+    bookdown::word_document2:
+      toc: no
+      toc_depth: 6
+      number_sections: true
+      reference_docx: template.docx
+  editor_options: 
+    chunk_output_type: console
 ---
