@@ -39,3 +39,14 @@
 data <- data %>%
 			mutate(species=replace_names(species, species_names, spp_match))
 
+###########################################################
+# Branch lengths and VCV matrix
+###########################################################
+# Create branch lengths for tree using Grafen's method
+tree_bl <- compute.brlen(tree, method = "Grafen", power = 1)
+
+# Fix tip labels
+tree_bl$tip.label <- gsub("_", " ", gsub("_ott.+", "", tree_bl$tip.label))
+
+write.tree(tree_bl, "./phylogeny/tree")
+write.csv(data, "./data/meta_data.csv")
