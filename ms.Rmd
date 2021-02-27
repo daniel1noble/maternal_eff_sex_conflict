@@ -3,7 +3,7 @@
   author: 
   date: "`r Sys.Date()`"
   bibliography: refs.bib
-  csl: science.csl
+  csl: pnas.csl
   output: 
     bookdown::html_document2:
       code_folding: hide
