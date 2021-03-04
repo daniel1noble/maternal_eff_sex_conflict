@@ -8,6 +8,7 @@
 
 # Libraries 
 	pacman::p_load(rotl, tidyverse, ape, phytools, readxl)
+	source("./R/func.R")
 
 # Datasets; it's in excel and has two sheets, so will use readxl package. We need sheet one
 
@@ -25,7 +26,7 @@
 		species_names <- unique(spp)
 
 # Lets use ROTL to find taxa, and possible synonymns
-		matching <- tnrs_match_names(species) 
+		 matching <- tnrs_match_names(species_names)  
 		spp_match <- matching %>% pull(unique_name)
 
 # Now that we have the list of most up-to-date names from ROTL, we can do a few things to get a phylogeny. First, export list for TimeTree
