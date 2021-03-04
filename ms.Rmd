@@ -19,3 +19,17 @@
   editor_options: 
     chunk_output_type: console
 ---
+
+
+
+```{r loaddata, echo = FALSE, results = "hide"}
+  data <- read.csv("./data/meta_data.csv")
+
+  # Summary statistics for the results
+  inverts <- data %>% 
+             mutate(insect = ifelse(class %in% c("Insecta", "Gastropoda", "Malacostraca", "Arachnida", "Clitellata (Phylum Annelida)",  "Secernentea (Phylum Nematoda)"), 1,0))
+```
+
+# Results
+
+Overall, we collected effect sizes for a total of `r length(unique(data$species))` species from `r length(unique(data$study))` studies. Unsurprisingly, invertebrates (classes: Insecta, Gastropoda, Malacostraca, Arachnida, Clitellata and Secernentea) made up most of the data (`r (table(inverts$insect)[2] / sum(table(inverts$insect)))*100`%), reflecting the fact that overt sexual conflict is more common in these groups.  
