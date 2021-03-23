@@ -20,7 +20,7 @@
 
 # Get some summary stats:
 	# How many species?
-		length(unique(spp)) #38
+		length(unique(spp)) #33
 
 	# What are the unique species; note that Calopteryx doesn't have a species binomial classification
 		species_names <- unique(spp)

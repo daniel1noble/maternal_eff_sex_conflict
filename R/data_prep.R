@@ -4,7 +4,7 @@
 ##########################################################
 
 # Libraries
-pacman::p_load(tidyverse, metafor, brms)
+pacman::p_load(tidyverse, metafor, brms, latex2exp)
 
 # Load data written from phylogeny script. 
 	data <- read.csv("./data/meta_data.csv")
@@ -50,3 +50,13 @@ data <- escalc(m1i = X_C, sd1i =sd_C, n1i = N_C, m2i= X_T, sd2i= sd_T, n2i= N_T,
 # Clean data up a bit. We don't need all columns
 data <- data %>% 
 select(study, author, year, class, order, family, genus, species, variable, fitness.estimate, treatment, estimated.increase.in.harm, X_C, sd_C, N_C, X_T, sd_T, N_T, SMDH, v_SMDHq, SME_index, Male.measure, Female.measure, SCR.SCI, Sperm.compet, Harm_type, Parental.care , Gestation, depend, shared.control, source)
+
+# Have a look. Does look like clear evidence for publication bias though. 
+ggplot(data, aes(x = SMDH, y = 1 / sqrt(v_SMDHq), xmin = -10, xmax = 28)) +
+geom_point() +
+labs(x = "SMDH", y = TeX("Precision ($\\frac{1}{\\sqrt{v}}$)")) 
+
+# Find outlier data.There is a clear outlier, which is study 047. I've got to the original paper and noticed data was extracted from boxplot. SD values were very small for the mean data, suggesting data entry. I re-extracted from raw data which was also presented and SD's are much more sensible and way different from original extraction and conversion from box plot.
+data %>% filter(SMDH >=10)
+
+
