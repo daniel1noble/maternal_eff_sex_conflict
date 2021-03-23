@@ -20,8 +20,10 @@
     chunk_output_type: console
 ---
 
+```{r loadpackages, echo = FALSE, results = "hide"}
+  pacman::p_load(tidyverse, metafor, brms)
 
-
+```
 ```{r loaddata, echo = FALSE, results = "hide"}
   data <- read.csv("./data/meta_data.csv")
 
