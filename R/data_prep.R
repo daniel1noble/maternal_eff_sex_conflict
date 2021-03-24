@@ -43,7 +43,6 @@ pacman::p_load(tidyverse, metafor, brms, latex2exp)
 
 	spp_data %>% summary()
 
-
 # Generate Effect Sizes - Going to use SMDH (Hedges g with heteroscedasticity correction)
 data <- escalc(m1i = X_C, sd1i =sd_C, n1i = N_C, m2i= X_T, sd2i= sd_T, n2i= N_T, data = data, append = TRUE, measure = "SMDH", var.names=c("SMDH","v_SMDHq"))
 
@@ -51,12 +50,48 @@ data <- escalc(m1i = X_C, sd1i =sd_C, n1i = N_C, m2i= X_T, sd2i= sd_T, n2i= N_T,
 data <- data %>% 
 select(study, author, year, class, order, family, genus, species, variable, fitness.estimate, treatment, estimated.increase.in.harm, X_C, sd_C, N_C, X_T, sd_T, N_T, SMDH, v_SMDHq, SME_index, Male.measure, Female.measure, SCR.SCI, Sperm.compet, Harm_type, Parental.care , Gestation, depend, shared.control, source)
 
-# Have a look. Does look like clear evidence for publication bias though. 
-ggplot(data, aes(x = SMDH, y = 1 / sqrt(v_SMDHq), xmin = -10, xmax = 28)) +
-geom_point() +
-labs(x = "SMDH", y = TeX("Precision ($\\frac{1}{\\sqrt{v}}$)")) 
+# Have a look. Does look like clear evidence for publication bias. 
+ggplot(data, aes(x = SMDH, y = 1 / sqrt(v_SMDHq), xmin = -6, xmax = 6)) +
+geom_point(aes(colour = class)) +
+labs(x = "SMDH", 
+	 y = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$"),
+	 colour = "Class") +
+scale_color_grey() + 
+#scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9")) + 
+theme_bw() 
 
 # Find outlier data.There is a clear outlier, which is study 047. I've got to the original paper and noticed data was extracted from boxplot. SD values were very small for the mean data, suggesting data entry. I re-extracted from raw data which was also presented and SD's are much more sensible and way different from original extraction and conversion from box plot.
 data %>% filter(SMDH >=10)
 
+#####
+# What are effect sizes per groups looking like
 
+ggplot(data, aes(x = Gestation, y = SMDH, size = 1/sqrt(v_SMDHq))) + geom_violin() + geom_point() + theme_bw() + labs(x = "Gestation", 
+	 y = "SMDH",
+	 size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$"))
+
+# Nothing we can do with parental care. Only 1 data point. Not useful. 
+ggplot(data, aes(x = Parental.care, y = SMDH, size = 1/sqrt(v_SMDHq))) + geom_violin() + geom_point() + theme_bw() + labs(x = "Gestation", 
+	 y = "SMDH",
+	 size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$")) 
+
+# How about measure of sexual dimorphism; could do this a few ways. Probably nicest is to just use lnRR as a SSD measure. Deals with big variation among species (log), and also nicely interpretable. 
+data <- data %>% mutate(     SSD = Male.measure - Female.measure,
+						SSD_lnRR = log(Male.measure / Female.measure))
+
+ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDHq), colour = species)) + geom_point() + theme_bw() + labs(x = "SSD", 
+	 y = "SMDH",
+	 size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$"),
+	 colour = "Species") +
+	guides(colour = guide_legend(), 
+			 size = guide_legend(direction = "horizontal"))
+
+# Harm type
+	ggplot(data, aes(x = Harm_type, y = SMDH, size = 1/sqrt(v_SMDHq))) + geom_violin() + geom_point() + theme_bw() + labs(x = "Harm Type", 
+	 y = "SMDH",
+	 size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$")) 
+
+# Sperm competition
+	ggplot(data, aes(x = Sperm.compet, y = SMDH, size = 1/sqrt(v_SMDHq))) + geom_violin() + geom_point() + theme_bw() + labs(x = "Sperm Competition", 
+	 y = "SMDH",
+	 size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$")) 
