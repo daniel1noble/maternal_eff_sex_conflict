@@ -25,13 +25,43 @@
 
 ```
 ```{r loaddata, echo = FALSE, results = "hide"}
-  data <- read.csv("./data/meta_data.csv")
+  # Tree
+      data <- read.csv("./data/meta_data.csv")
+      data <- data %>% 
+              mutate(species2 = species)
+  
+  # Bring in and prune tree
+       tree <- read.tree("./phylogeny/tree")
+       tree$tip.label <- gsub("_", " ", tree$tip.label)
+  phylogeny <- vcv(tree, corr=TRUE)
 
   # Summary statistics for the results
   inverts <- data %>% 
              mutate(insect = ifelse(class %in% c("Insecta", "Gastropoda", "Malacostraca", "Arachnida", "Clitellata (Phylum Annelida)",  "Secernentea (Phylum Nematoda)"), 1,0))
+
+model <- rma.mv(SMDH ~ 1, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|variable, ~1|species), test = "t", data = data)
+
+model <- rma.mv(lnRR ~ 1, V = data$v_lnRR, random = list(~1|study, ~1|obs, ~1|variable, ~1|species), test = "t", data = data)
+
+model <- rma.mv(SMDH ~ 1, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|variable, ~1|species, ~1|species2), R = list(species = phylogeny), test = "t", data = data)
+
+model <- rma.mv(SMDH ~ SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
+
+model <- rma.mv(lnRR ~ SSD_lnRR, V =  data$v_lnRR, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
+
+model <- rma.mv(SMDH ~ Harm_type-1, V = data$v_SMDH, random = list(~1|study, ~1|species, ~1|obs), R = list(species = phylogeny), test = "t", data = data)
+robust(model, cluster = data$study)
+
+model <- rma.mv(lnRR ~ Harm_type, V = data$v_lnRR, random = list(~1|study, ~1|species, ~1|obs), R = list(species = phylogeny), test = "t", data = data)
+robust(model, cluster = data$study)
+
+model <- rma.mv(SMDH ~ Harm_type + SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
+robust(model, cluster = data$study)
+
 ```
 
 # Results
 
-Overall, we collected effect sizes for a total of `r length(unique(data$species))` species from `r length(unique(data$study))` studies. Unsurprisingly, invertebrates (classes: Insecta, Gastropoda, Malacostraca, Arachnida, Clitellata and Secernentea) made up most of the data (`r (table(inverts$insect)[2] / sum(table(inverts$insect)))*100`%), reflecting the fact that overt sexual conflict is more common in these groups.  
+Overall, we collected effect sizes for a total of `r length(unique(data$species))` species from `r length(unique(data$study))` studies. Unsurprisingly, invertebrates (classes: Insecta, Gastropoda, Malacostraca, Arachnida, Clitellata and Secernentea) made up most of the data (`r (table(inverts$insect)[2] / sum(table(inverts$insect)))*100`%).  
+
+

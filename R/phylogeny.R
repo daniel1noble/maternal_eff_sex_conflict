@@ -49,5 +49,6 @@ tree_bl <- compute.brlen(tree, method = "Grafen", power = 1)
 # Fix tip labels
 tree_bl$tip.label <- gsub("_", " ", gsub("_ott.+", "", tree_bl$tip.label))
 
+plot(tree_bl, use.edge = TRUE)
 write.tree(tree_bl, "./phylogeny/tree")
 write.csv(data, "./data/meta_data.csv", row.names = FALSE)
