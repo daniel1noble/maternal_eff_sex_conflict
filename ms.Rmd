@@ -21,7 +21,7 @@
 ---
 
 ```{r loadpackages, echo = FALSE, results = "hide"}
-  pacman::p_load(tidyverse, metafor, brms)
+  pacman::p_load(tidyverse, metafor, brms, metaAidR)
 
 ```
 ```{r loaddata, echo = FALSE, results = "hide"}
@@ -43,6 +43,8 @@
 
 # Models
   model <- rma.mv(SMDH ~ 1, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|variable, ~1|species), test = "t", data = data)
+
+  I2(model, v = data$v_SMDH, phylo = FALSE)
 
   model <- rma.mv(lnRR ~ 1, V = data$v_lnRR, random = list(~1|study, ~1|obs, ~1|variable, ~1|species), test = "t", data = data)
 
