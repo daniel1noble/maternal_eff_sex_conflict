@@ -39,29 +39,45 @@
   inverts <- data %>% 
              mutate(insect = ifelse(class %in% c("Insecta", "Gastropoda", "Malacostraca", "Arachnida", "Clitellata (Phylum Annelida)",  "Secernentea (Phylum Nematoda)"), 1,0))
 
-model <- rma.mv(SMDH ~ 1, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|variable, ~1|species), test = "t", data = data)
+  parity <- data %>% group_by(species) %>% summarise(parity = unique(Gestation)) %>% group_by(parity) %>% summarise(n=n())
 
-model <- rma.mv(lnRR ~ 1, V = data$v_lnRR, random = list(~1|study, ~1|obs, ~1|variable, ~1|species), test = "t", data = data)
+# Models
+  model <- rma.mv(SMDH ~ 1, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|variable, ~1|species), test = "t", data = data)
 
-model <- rma.mv(SMDH ~ 1, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|variable, ~1|species, ~1|species2), R = list(species = phylogeny), test = "t", data = data)
+  model <- rma.mv(lnRR ~ 1, V = data$v_lnRR, random = list(~1|study, ~1|obs, ~1|variable, ~1|species), test = "t", data = data)
 
-model <- rma.mv(SMDH ~ SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
+  model <- rma.mv(SMDH ~ 1, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|variable, ~1|species, ~1|species2), R = list(species = phylogeny), test = "t", data = data)
 
-model <- rma.mv(lnRR ~ SSD_lnRR, V =  data$v_lnRR, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
+  model <- rma.mv(SMDH ~ SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
 
-model <- rma.mv(SMDH ~ Harm_type-1, V = data$v_SMDH, random = list(~1|study, ~1|species, ~1|obs), R = list(species = phylogeny), test = "t", data = data)
-robust(model, cluster = data$study)
+  model <- rma.mv(lnRR ~ SSD_lnRR, V =  data$v_lnRR, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
 
-model <- rma.mv(lnRR ~ Harm_type, V = data$v_lnRR, random = list(~1|study, ~1|species, ~1|obs), R = list(species = phylogeny), test = "t", data = data)
-robust(model, cluster = data$study)
+  model <- rma.mv(SMDH ~ Harm_type-1, V = data$v_SMDH, random = list(~1|study, ~1|species, ~1|obs), R = list(species = phylogeny), test = "t", data = data)
+  robust(model, cluster = data$study)
 
-model <- rma.mv(SMDH ~ Harm_type + SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
-robust(model, cluster = data$study)
+  model <- rma.mv(lnRR ~ Harm_type, V = data$v_lnRR, random = list(~1|study, ~1|species, ~1|obs), R = list(species = phylogeny), test = "t", data = data)
+  robust(model, cluster = data$study)
+
+  model <- rma.mv(SMDH ~ Harm_type + SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
+  robust(model, cluster = data$study)
+
+  model <- rma.mv(SMDH ~ Gestation + SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
+  robust(model, cluster = data$study)
+
+  # Note that for gestation, these data on viviparous species are restricted completely to fish only, and indirect measurements. So, confounded. It's hard to know what is the driving factor...could be parity mode, but could be also due to all being fish, or even just that they are indirect measures, also, only 7 studies.
+  model <- rma.mv(lnRR ~ Gestation - 1, V = data$v_lnRR, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
+  robust(model, cluster = data$study)
+
+## Have a look at SSD data in relation to the key moderators
+  ggplot(data, aes(y = SSD_lnRR, x = Harm_type)) + geom_violin() + geom_point()
+  ggplot(data, aes(y = SSD_lnRR, x = Gestation)) + geom_violin() + geom_point()
 
 ```
 
 # Results
 
-Overall, we collected effect sizes for a total of `r length(unique(data$species))` species from `r length(unique(data$study))` studies. Unsurprisingly, invertebrates (classes: Insecta, Gastropoda, Malacostraca, Arachnida, Clitellata and Secernentea) made up most of the data (`r (table(inverts$insect)[2] / sum(table(inverts$insect)))*100`%).  
+Overall, we collected effect sizes for a total of `r length(unique(data$species))` species from `r length(unique(data$study))` studies. Unsurprisingly, invertebrates (classes: Insecta, Gastropoda, Malacostraca, Arachnida, Clitellata and Secernentea) made up most of the data (`r (table(inverts$insect)[2] / sum(table(inverts$insect)))*100`%). We obtained `r table(data$Harm_type)[2]` effect sizes where manipulations resulted in changes in direct harm (e.g., XX), whereas `r table(data$Harm_type)[3]` effects came from studies on species that manipulated indirect harm to females. From a total of `r table(data$Harm_type)[1]` effect sizes it was clear that females received both direct and indirect harm from male matings. 
+
+Overall, we obtained `r table(data$Gestation)[1]` from `r parity[1,2]` oviparous species, and `r table(data$Gestation)[2]` from `r parity[2,2]`viviparous species. Unfortunately, viviparous species were all fish species with indirect female harm. As such, we analysed only 'harm type' and an index of sexual size dimorphism.
 
 
