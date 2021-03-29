@@ -1,5 +1,7 @@
 *.docx
+*.html
 .Rproj.user
 .Rhistory
 ~$Data_MA.xlsx
-
+ms_cache/
+ms_files/

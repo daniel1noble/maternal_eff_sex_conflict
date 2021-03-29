@@ -5,17 +5,17 @@
   bibliography: refs.bib
   csl: pnas.csl
   output: 
+    bookdown::word_document2:
+      toc: no
+      toc_depth: 6
+      number_sections: true
+      reference_docx: template.docx
     bookdown::html_document2:
       code_folding: hide
       number_sections: no
       toc: yes
       toc_depth: 6
       toc_float: yes
-    bookdown::word_document2:
-      toc: no
-      toc_depth: 6
-      number_sections: true
-      reference_docx: template.docx
   editor_options: 
     chunk_output_type: console
 ---
@@ -27,7 +27,7 @@
 ```
 
 ```{r loadpackages, echo = FALSE, results = "hide"}
-  pacman::p_load(tidyverse, metafor, brms, metaAidR)
+  pacman::p_load(tidyverse, metafor, brms, metaAidR, ape, phytools, metaAidR)
 
 ```
 ```{r loaddata, echo = FALSE, results = "hide"}
@@ -52,18 +52,11 @@
 
   I2(model, v = data$v_SMDH, phylo = FALSE)
 
-  model <- rma.mv(lnRR ~ 1, V = data$v_lnRR, random = list(~1|study, ~1|obs, ~1|variable, ~1|species), test = "t", data = data)
-
   model <- rma.mv(SMDH ~ 1, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|variable, ~1|species, ~1|species2), R = list(species = phylogeny), test = "t", data = data)
 
   model <- rma.mv(SMDH ~ SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
 
-  model <- rma.mv(lnRR ~ SSD_lnRR, V =  data$v_lnRR, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
-
   model <- rma.mv(SMDH ~ Harm_type-1, V = data$v_SMDH, random = list(~1|study, ~1|species, ~1|obs), R = list(species = phylogeny), test = "t", data = data)
-  robust(model, cluster = data$study)
-
-  model <- rma.mv(lnRR ~ Harm_type, V = data$v_lnRR, random = list(~1|study, ~1|species, ~1|obs), R = list(species = phylogeny), test = "t", data = data)
   robust(model, cluster = data$study)
 
   model <- rma.mv(SMDH ~ Harm_type + SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
@@ -73,8 +66,6 @@
   robust(model, cluster = data$study)
 
   # Note that for gestation, these data on viviparous species are restricted completely to fish only, and indirect measurements. So, confounded. It's hard to know what is the driving factor...could be parity mode, but could be also due to all being fish, or even just that they are indirect measures, also, only 7 studies.
-  model <- rma.mv(lnRR ~ Gestation - 1, V = data$v_lnRR, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
-  robust(model, cluster = data$study)
 
 ## Have a look at SSD data in relation to the key moderators
   ggplot(data, aes(y = SSD_lnRR, x = Harm_type)) + geom_violin() + geom_point()
