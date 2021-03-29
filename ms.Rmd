@@ -27,7 +27,7 @@
 ```
 
 ```{r loadpackages, echo = FALSE, results = "hide"}
-  pacman::p_load(tidyverse, metafor, brms, metaAidR, ape, phytools, metaAidR)
+  pacman::p_load(tidyverse, metafor, brms, metaAidR, ape, phytools, metaAidR, orchaRd)
 
 ```
 ```{r loaddata, echo = FALSE, results = "hide"}
@@ -48,22 +48,24 @@
   parity <- data %>% group_by(species) %>% summarise(parity = unique(Gestation)) %>% group_by(parity) %>% summarise(n=n())
 
 # Models
-  model <- rma.mv(SMDH ~ 1, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|variable, ~1|species), test = "t", data = data)
+  model1.1 <- rma.mv(SMDH ~ 1, V = data$v_SMDH, random = list(~1|study, ~1|variable, ~1|species, ~1|obs), test = "t", data = data)
 
-  I2(model, v = data$v_SMDH, phylo = FALSE)
+hetero_table <-  I2(model1.1, v = data$v_SMDH, phylo = FALSE)
 
-  model <- rma.mv(SMDH ~ 1, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|variable, ~1|species, ~1|species2), R = list(species = phylogeny), test = "t", data = data)
+  model1.2 <- rma.mv(SMDH ~ 1, V = data$v_SMDH, random = list(~1|study, ~1|variable, ~1|species, ~1|species2, ~1|obs), R = list(species = phylogeny), test = "t", data = data)
+  
+hetero_table_phylo <-  I2(model1.2, v = data$v_SMDH, phylo = "species")
 
-  model <- rma.mv(SMDH ~ SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
+  model1.3 <- rma.mv(SMDH ~ SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
 
-  model <- rma.mv(SMDH ~ Harm_type-1, V = data$v_SMDH, random = list(~1|study, ~1|species, ~1|obs), R = list(species = phylogeny), test = "t", data = data)
-  robust(model, cluster = data$study)
+  model1.4 <- rma.mv(SMDH ~ Harm_type-1, V = data$v_SMDH, random = list(~1|study, ~1|species, ~1|obs), R = list(species = phylogeny), test = "t", data = data)
+  robust(model1.4, cluster = data$study)
 
-  model <- rma.mv(SMDH ~ Harm_type + SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
-  robust(model, cluster = data$study)
+  model1.5 <- rma.mv(SMDH ~ Harm_type + SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
+  robust(model1.5, cluster = data$study)
 
-  model <- rma.mv(SMDH ~ Gestation + SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
-  robust(model, cluster = data$study)
+  model1.6 <- rma.mv(SMDH ~ Gestation + SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
+  robust(model1.6, cluster = data$study)
 
   # Note that for gestation, these data on viviparous species are restricted completely to fish only, and indirect measurements. So, confounded. It's hard to know what is the driving factor...could be parity mode, but could be also due to all being fish, or even just that they are indirect measures, also, only 7 studies.
 
@@ -78,5 +80,9 @@
 Overall, we collected effect sizes for a total of `r length(unique(data$species))` species from `r length(unique(data$study))` studies. Unsurprisingly, invertebrates (classes: Insecta, Gastropoda, Malacostraca, Arachnida, Clitellata and Secernentea) made up most of the data (`r (table(inverts$insect)[2] / sum(table(inverts$insect)))*100`%). We obtained `r table(data$Harm_type)[2]` effect sizes from manipulations on species that resulted in direct harm (e.g., XX), whereas `r table(data$Harm_type)[3]` effects came from studies on species that manipulated indirect harm to females (e.g., mating rate and harassment). A total of `r table(data$Harm_type)[1]` effect sizes were from experiment where females received both direct and indirect harm from male matings. 
 
 Across all species, `r table(data$Gestation)[1]` effects were from `r parity[1,2]` oviparous species, and `r table(data$Gestation)[2]` effects were from `r parity[2,2]` viviparous species. Unfortunately, effect sizes from viviparous species were all take from studies on fish species with indirect male harm. As such, we analyzed only 'harm type' and an index of sexual size dimorphism.
+
+#### Manipulating direct and indirect female harm negatively impacts female fitness
+
+Experimentally manipulating female harm resulted in a strong decrease in female fitness overall (i.e., positive effect size with control group females having higher fitness than treatment groups: `r model1.1$beta`, 95% CI: `r model1.1$ci.lb` to `r model1.1$ci.ub`, $n_{effects}$ = `r model1.1$k.all`, $n_{study}$ = `r model1.1$s.nlevels[1]`). Even when accouting for sampling variance there was high effect size heterogeneity ($I^2_{Total}$ = `r hetero_table$I2_Est.[nrow(hetero_table)]`, 95% CI: `r hetero_table[nrow(hetero_table), "2.5% CI"]` to `r hetero_table[nrow(hetero_table), "97.5% CI"]`) with most variance being the result of between study ($I^2_{Study}$ = `r hetero_table$I2_Est.[1]`, 95% CI: `r hetero_table[1, "2.5% CI"]` to `r hetero_table[1, "97.5% CI"]`) and between species ($I^2_{Species}$ = `r hetero_table$I2_Est.[3]`, 95% CI: `r hetero_table[3, "2.5% CI"]` to `r hetero_table[3, "97.5% CI"]`) effects. The trait type and phylogeny explained much less variation overall ($I^2_{Trait}$ = `r hetero_table$I2_Est.[2]`, 95% CI: `r hetero_table[2, "2.5% CI"]` to `r hetero_table[2, "97.5% CI"]`; $I^2_{Phylogeny}$ = `r hetero_table_phylo$I2_Est.[5]`, 95% CI: `r hetero_table_phylo[5, "2.5% CI"]` to `r hetero_table_phylo[5, "97.5% CI"]`). 
 
 
