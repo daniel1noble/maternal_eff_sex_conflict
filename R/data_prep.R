@@ -67,6 +67,9 @@ theme_bw()
 # Find outlier data.There is a clear outlier, which is study 047. I've got to the original paper and noticed data was extracted from boxplot. SD values were very small for the mean data, suggesting data entry. I re-extracted from raw data which was also presented and SD's are much more sensible and way different from original extraction and conversion from box plot.
 data %>% filter(SMDH >=10) # NOTE: Outlier fixed. Raw data re-extracted as it was not correct.
 
+# What is the correspondence between study and species
+stdy_spp <- data.frame(data %>% group_by(species) %>% summarise(n_stdy = length(unique(study))))
+stdy_spp %>% filter(n_stdy > 1) %>% nrow(.) # Most species from one study but still 9 species across more than one study so should be able to decouple effects
 #####
 # What are effect sizes per groups looking like
 
