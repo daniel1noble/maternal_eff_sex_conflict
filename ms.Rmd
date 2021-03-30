@@ -35,7 +35,7 @@
       data <- read.csv("./data/meta_data.csv")
       data <- data %>% 
               mutate(species2 = species)
-      data$n_eff <- with(data, (N_C*N_T) / (N_C+N_T))
+      data$n_eff <- with(data, (4*(N_C*N_T)) / (N_C+N_T))
   
   # Bring in and prune tree
        tree <- read.tree("./phylogeny/tree")
@@ -91,4 +91,24 @@ Experimentally manipulating female harm resulted in a strong decrease in female 
 
 ```{r funnel, fig.height=4.5, fig.width=4.5}
 funnel(model1.1, yaxis="seinv", digits = 2, las = 1)
+```
+
+
+```{r pretty_table}
+table.model.r.gt <- table.model.r %>% 
+                             gt() %>% 
+          cols_label(n=md("**n**"),
+             k=md("**k**"),
+             mean=md("**Meta-analytic mean**"),
+             CI=md("**95% CI**"),
+             PI=md("**95% PI**"),
+             I2_obsID=md("***I*<sup>2</sup><sub>residual</sub>\n(%)**"),
+             I2_paperID=md("***I*<sup>2</sup><sub>study</sub>\n(%)**"),
+             I2_nonphylo=md("***I*<sup>2</sup><sub>non-phylogeny</sub>\n(%)**"),
+             I2_phylo=md("***I*<sup>2</sup><sub>phylogeny</sub>\n(%)**"),
+             I2_total=md("***I*<sup>2</sup><sub>total</sub>    \n(%)**"),
+             )                     %>%
+      cols_align(align = "center") %>%
+  tab_source_note(source_note = md("n = number of studies; k = number of effects; CI = confidence interval; PI = prediction interval; *I*<sup>2</sup> = heterogeneity")) #%>%
+# tab_options(table.width=770)
 ```
