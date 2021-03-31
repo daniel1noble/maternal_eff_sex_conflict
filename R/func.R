@@ -15,3 +15,28 @@ replace_names <- function(string, match, replace){
 	string_replaced <-replace[match(string, match)]
 	return(string_replaced)
 }
+
+
+#' @title make_table
+#' @description Function takes a MLM intercept only metafor model and creates a table. 
+#' @param model Metafor intercept only model
+#' @param data The data frame
+
+make_table <- function(model, data){
+ hetero_table <-  metaAidR::I2(model, v = data$v_SMDH, phylo = FALSE)
+ estimates    <-  predict(model)
+ 
+  tmp <-  data.frame(  n = model$k,
+                       std = model$s.nlevels[1],
+                       spp = model$s.nlevels[3],
+                       est = round(estimates$pred, digits = 2), 
+                        CI = paste0(round(estimates$ci.lb, digits = 2), " to ", round(estimates$ci.ub, digits = 2)),
+                        PI = paste0(round(estimates$cr.lb, digits = 2), " to ", round(estimates$cr.ub, digits = 2)),
+                   i2_stdy = paste0(hetero_table[rownames(hetero_table)=="study",][1]*100, "%", " (", hetero_table[rownames(hetero_table)=="study",][2]*100, " - ", hetero_table[rownames(hetero_table)=="study",][3]*100, "%)" ), 
+                  i2_trait = paste0(hetero_table[rownames(hetero_table)=="variable",][1]*100, "%", " (", hetero_table[rownames(hetero_table)=="variable",][2]*100, " - ", hetero_table[rownames(hetero_table)=="variable",][3]*100, "%)" ), 
+                i2_species = paste0(hetero_table[rownames(hetero_table)=="species",][1]*100, "%", " (", hetero_table[rownames(hetero_table)=="species",][2]*100, " - ", hetero_table[rownames(hetero_table)=="species",][3]*100, "%)" ), 
+                    i2_tot = paste0(hetero_table[rownames(hetero_table)=="total",][1]*100, "%", " (", hetero_table[rownames(hetero_table)=="total",][2]*100, " - ", hetero_table[rownames(hetero_table)=="total",][3]*100, "%)" )
+  )
+  
+  return(tmp)
+}
