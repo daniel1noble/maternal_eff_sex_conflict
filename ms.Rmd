@@ -27,7 +27,7 @@
 ```
 
 ```{r loadpackages, echo = FALSE, results = "hide"}
-  pacman::p_load(tidyverse, metafor, brms, metaAidR, ape, phytools, metaAidR, orchaRd, gt, kableExtra, flextable)
+  pacman::p_load(tidyverse, metafor, brms, metaAidR, ape, phytools, metaAidR, orchaRd, gt, kableExtra, flextable, patchwork, latex2exp, ggarrange)
   source("./R/func.R")
 ```
 ```{r loaddata, echo = FALSE, results = "hide"}
@@ -60,7 +60,7 @@
 
 # Table 1: Effect, confidemce intervals, prediction intervals, heterogenity
             table1 <- make_table(model1.1, data)
-      hetero_table <- I2(model1.1, v = data$v_SMDH)
+      hetero_table <- I2(model1.1, v = data$v_SMDH) # Same as orchaRd::i2_ml(model1.1)
 hetero_table_phylo <- I2(model1.2, v = data$v_SMDH, phylo = "species2")
 
 ###################
@@ -77,13 +77,17 @@ hetero_table_phylo <- I2(model1.2, v = data$v_SMDH, phylo = "species2")
 # Meta-regressions
 ###################
   
-  model1.3 <- rma.mv(SMDH ~ SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|variable, ~1|species, ~1|obs), test = "t", data = data)
+  model1.3 <- rma.mv(SMDH ~ scale(SSD_lnRR), V = data$v_SMDH, random = list(~1|study, ~1|variable, ~1|species, ~1|obs), test = "t", data = data)
   robust(model1.3, cluster = data$study)
+  
+  r2_SSD=r2_ml(model1.3)
 
   model1.4 <- rma.mv(SMDH ~ Harm_type-1, V = data$v_SMDH, random = list(~1|study, ~1|species, ~1|obs), R = list(species = phylogeny), test = "t", data = data)
   robust(model1.4, cluster = data$study)
 
-  model1.5 <- rma.mv(SMDH ~ Harm_type + SSD_lnRR, V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
+  r2_ml(model1.4)
+  
+  model1.5 <- rma.mv(SMDH ~ Harm_type + scale(SSD_lnRR), V = data$v_SMDH, random = list(~1|study, ~1|obs, ~1|species), R = list(species = phylogeny), test = "t", data = data)
   robust(model1.5, cluster = data$study)
 
 
@@ -104,8 +108,19 @@ Experimentally manipulating female harm resulted in a strong decrease in female 
 
 When accouting for sampling variance there was high effect size heterogeneity ($I^2_{Total}$ = `r hetero_table$I2_Est.[nrow(hetero_table)]`, 95% CI: `r hetero_table[nrow(hetero_table), "2.5% CI"]` to `r hetero_table[nrow(hetero_table), "97.5% CI"]`) with most variance being the result of between study ($I^2_{Study}$ = `r hetero_table$I2_Est.[1]`, 95% CI: `r hetero_table[1, "2.5% CI"]` to `r hetero_table[1, "97.5% CI"]`) and between species ($I^2_{Species}$ = `r hetero_table$I2_Est.[3]`, 95% CI: `r hetero_table[3, "2.5% CI"]` to `r hetero_table[3, "97.5% CI"]`) effects. The trait type and phylogeny explained much less variation overall ($I^2_{Trait}$ = `r hetero_table$I2_Est.[2]`, 95% CI: `r hetero_table[2, "2.5% CI"]` to `r hetero_table[2, "97.5% CI"]`; $I^2_{Phylogeny}$ = `r hetero_table_phylo$I2_Est.[5]`, 95% CI: `r hetero_table_phylo[5, "2.5% CI"]` to `r hetero_table_phylo[5, "97.5% CI"]`). 
 
-```{r funnel, fig.height=4.5, fig.width=4.5, fig.cap="Funnel plot of effect size as a function of precision (i.e., inverse of sampling standard error). 95% pseudoconfidence intervals are provuded."}
-funnel(model1.1, yaxis="seinv", digits = 2, las = 1)
+```{r funnel, fig.height=5, fig.width=16, fig.cap="A) Funnel plot of effect size as a function of precision (i.e., inverse of sampling standard error). B) orchaRd plot of the overall meta-analytic mean efect size, 95% confidnece intervals (thick black bars) and 95% prediction intervals (whiskers)"}
+p1 <- ggplot(data, aes(x = SMDH, y = 1 / sqrt(v_SMDH), xmin = -6, xmax = 6)) +
+geom_point(aes(colour = class)) +
+labs(x = "SMDH", 
+	 y = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$"),
+	 colour = "Class") +
+scale_color_grey() + 
+#scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9")) + 
+theme_bw() 
+
+p2 <- orchard_plot(model1.1, mod = "Int", xlab = "SMDH") + scale_colour_manual(values = "grey") + scale_fill_manual(values = "red")
+
+p1 + p2 + plot_annotation(tag_levels = c('A', 'B'))
 
 ```
 ```{r pretty_table}
@@ -131,4 +146,19 @@ ft
 
 
 
-#### Female fitness is comproised more in species with male-biased sexual size dimorphism (SSD) 
+
+#### Female fitness is less compromised in species with reversed sexual size dimorphism (SSD) 
+
+Species where females are larger than males (i.e., negative SSD) are less impacted by sexual conflict compared to spcies where males and females are closer in size or males are larger (i.e., SSD > 0) (z-transformed $\beta_{SSD}$ = `r model1.3$beta[2]`, 95% CI = `r model1.3$ci.lb[2]` to `r model1.3$ci.ub[2]`, Figure \@ref(fig:SSD) , $R^2_{marginal}$ = `r r2_SSD[1]*100`% of effect size variation).
+
+```{r SSD, fig.width=6, fig.height=4.5}
+p3 = ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDH))) + 
+    geom_point() + 
+      theme_bw() + 
+  labs(x = "SSD", 
+	     y = "SMDH",
+	  size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$")) +
+	guides(size = guide_legend(direction = "vertical"))
+
+p3
+```
