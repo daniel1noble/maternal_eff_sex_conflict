@@ -20,10 +20,10 @@ replace_names <- function(string, match, replace){
 #' @title make_table
 #' @description Function takes a MLM intercept only metafor model and creates a table. 
 #' @param model Metafor intercept only model
-#' @param data The data frame
+#' @param heteroTable The heterogenity table derived from metafor::I2
 
-make_table <- function(model, data){
- hetero_table <-  metaAidR::I2(model, v = data$v_SMDH, phylo = FALSE)
+make_table <- function(model,  heteroTable){
+ hetero_table <-  heteroTable
  estimates    <-  predict(model)
  
   tmp <-  data.frame(  n = model$k,
