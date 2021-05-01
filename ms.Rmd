@@ -166,7 +166,18 @@ ft
 
 Male harm type impacted the overall magnitude of effects. 
 
-
+```{r maleharn, fig.width=6, fig.height=4.5}
+ggplot(data, aes(x = Harm_type, y = SMDH, size = 1/sqrt(v_SMDH), fill = Harm_type, colour = Harm_type)) + geom_violin(alpha = 0.2) + geom_point() + 
+  geom_jitter(width = 0.1) + 
+  theme_bw() + 
+		theme(legend.background = element_blank(),
+			           legend.key = element_blank()) + 
+  labs(x = "Harm Type", y = "SMDH", size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$")) +
+  scale_x_discrete(labels = c("Both", "Direct", "Indirect")) +
+  guides(size = guide_legend(override.aes = list(linetype = 0))) + 
+   scale_colour_discrete(guide = FALSE) +
+  scale_fill_discrete(guide = FALSE)
+```
 #### Female fitness is less compromised in species with reversed sexual size dimorphism (SSD) 
 
 Species where females are larger than males (i.e., negative SSD) are less impacted by sexual conflict compared to spcies where males and females are closer in size or males are larger (i.e., SSD > 0) (z-transformed $\beta_{SSD}$ = `r model1.3$beta[2]`, 95% CI = `r model1.3$ci.lb[2]` to `r model1.3$ci.ub[2]`, Figure \@ref(fig:SSD) , $R^2_{marginal}$ = `r r2_SSD[1]*100`% of effect size variation).
