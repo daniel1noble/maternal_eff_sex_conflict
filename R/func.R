@@ -40,3 +40,20 @@ make_table <- function(model,  heteroTable){
   
   return(tmp)
 }
+
+pred_interval <- function(model, tval){
+
+  test.stat <- abs(tval)
+  
+    sigmas <- sum(model$sigma2)
+        PI <- test.stat * sqrt(model$se^2 + sigmas)
+  
+    tmp <- data.frame (Est = model$beta,
+                        SE = model$se,
+                        lwr.CI = model$ci.lb,
+                         up.CI = model$ci.ub,
+                        lower.PI = model$beta - PI,
+                        upper.PI = model$beta + PI)
+  
+  return(tmp)
+}

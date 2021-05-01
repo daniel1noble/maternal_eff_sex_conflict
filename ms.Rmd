@@ -125,8 +125,8 @@ source("./R/func.R")
                      random = list(~1|study, ~1|obs, ~1|species), test = "t", data = data)
   
   robust_model1.5_2 <- robust(model1.5_2, cluster = data$study, vcov = "CR2")
+  robust_model1.5_2_PI <- pred_interval(model1.5_2, c(5.1796, -0.6908, 3.0189, 1.9679))
   
-  predict(robust_model1.5, newmods = newdata)
 
 ```
 # Methods
