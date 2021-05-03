@@ -102,7 +102,7 @@ ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDH), colour = species
 	 size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$")) 
 
 # Sperm competition
-	ggplot(data, aes(x = Sperm.compet, y = SMDH, size = 1/sqrt(v_SMDH))) + geom_violin() + geom_point() + theme_bw() + labs(x = "Sperm Competition", 
+	ggplot(data, aes(x = SCR.SCI, y = SMDH, size = 1/sqrt(v_SMDH))) + geom_violin() + geom_point() + theme_bw() + labs(x = "Sperm Competition", 
 	 y = "SMDH",
 	 size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$")) 
 
