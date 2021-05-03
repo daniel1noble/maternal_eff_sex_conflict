@@ -29,16 +29,18 @@
 ```{r loadpackages, echo = FALSE, results = "hide"}
   pacman::p_load(tidyverse, metafor, brms, metaAidR, ape, phytools, metaAidR, orchaRd, gt, kableExtra, flextable, patchwork, latex2exp, MuMIn, equatiomatic, magrittr, data.table)
 eval(metafor:::.MuMIn)
-source("./R/func.R")  
+
   
 ```
 ```{r loaddata, echo = FALSE, results = "hide"}
 ################
 # Tree
 ################
+source("./R/func.R")  
       data <- read.csv("./data/meta_data.csv")
       data <- data %>% 
-              mutate(species2 = species)
+              mutate(species2 = species, 
+                     zSSD = scale(SSD_lnRR))
   
   # Bring in and prune tree
        tree <- read.tree("./phylogeny/tree")
@@ -92,23 +94,33 @@ source("./R/func.R")
 # Meta-regressions
 ###################
   
-  model1.3 <- rma.mv(SMDH ~ scale(SSD_lnRR), V = data$v_SMDH, 
-                     random = list(~1|study, ~1|variable, ~1|species, ~1|obs), test = "t", data = data)
-  robust(model1.3, cluster = data$study)
+  # Marginalised model. Just easier to get slope
+  model1.3 <- rma.mv(SMDH ~ zSSD, V = data$v_SMDH, 
+                     random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data)
+  robust_model1.3 <- robust(model1.3, cluster = data$study)
   
-  r2_SSD=r2_ml(model1.3)
+  # Use raw SSD for plotting, so we can ployt raw data, which is easier to interpret
+  model1.3_nonZ <- rma.mv(SMDH ~ SSD_lnRR, V = data$v_SMDH, 
+                     random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data)
+  robust_model1.3_nonZ <- robust(model1.3_nonZ, cluster = data$study)
+  
+        r2_SSD = r2_ml(model1.3)
 
-  model1.4 <- rma.mv(SMDH ~ Harm_type-1, V = data$v_SMDH, 
+  model1.4 <- rma.mv(SMDH ~ Harm_type, V = data$v_SMDH, 
                      random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data)
   robust(model1.4, cluster = data$study)
 
-  r2_ml(model1.4)
+  male_harm_r2 = r2_ml(model1.4)
   
   # Model that contains harm type and SSD. Harmtype appears to have different variances, so I'll check whether it is safe to assume homogeneity of variance across groups
-  model1.5 <- rma.mv(SMDH ~  Harm_type + scale(SSD_lnRR), V = data$v_SMDH, 
+  model1.5 <- rma.mv(SMDH ~  Harm_type + zSSD, V = data$v_SMDH, 
                      random = list(~1|study, ~1|obs, ~1|species), test = "t", data = data)
   
-  model1.6 <- rma.mv(SMDH ~ Harm_type + scale(SSD_lnRR), V = data$v_SMDH, 
+  model1.5_nonZ <- rma.mv(SMDH ~ Harm_type + SSD_lnRR, V = data$v_SMDH, 
+                     random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data)
+  robust_model1.5_nonZ <- robust(model1.5_nonZ, cluster = data$study)
+  
+  model1.6 <- rma.mv(SMDH ~ Harm_type + zSSD, V = data$v_SMDH, 
                      random = list(~1|study, ~(1 + Harm_type)|obs, ~1|species), 
                      rho = 0, struc = "HCS", test = "t", data = data)
   
@@ -118,27 +130,33 @@ source("./R/func.R")
   
   # Check robustness of results using sandwich estimator
   robust_model1.5 <- robust(model1.5, cluster = data$study, vcov = "CR2")
-  predict(robust_model1.5)
   
   # Now reparameterize model
-  model1.5_2 <- rma.mv(SMDH ~ 0 + Harm_type + scale(SSD_lnRR), V = data$v_SMDH, 
+  model1.5_2 <- rma.mv(SMDH ~ 0 + Harm_type + zSSD, V = data$v_SMDH, 
                      random = list(~1|study, ~1|obs, ~1|species), test = "t", data = data)
   
-  robust_model1.5_2 <- robust(model1.5_2, cluster = data$study, vcov = "CR2")
+     robust_model1.5_2 <- robust(model1.5_2, cluster = data$study, vcov = "CR2")
   robust_model1.5_2_PI <- pred_interval(model1.5_2, c(5.1796, -0.6908, 3.0189, 1.9679))
   
+  # Add N
+  n <- data %>% group_by(Harm_type) %>% summarise(n = n(), nstdy = length(unique(study)))
+  n[4,c(2,3)] <- t(c(dim(data)[1], with(data, length(unique(study)))))
+  robust_model1.5_2_PI$n <- n$n
+  robust_model1.5_2_PI$nstudy <- n$nstdy
 
 ```
 # Methods
+#### Standardised Effect Size Measure
+We used the standardised mean difference with a small sample correction (i.e., Hedges' *g*) as our measure of effect size comparing female fitness measures across experimental treatments. To correct for the possibility that population variances in the two treatments differ, we made use of a corrected version of Hedges' *g* that controls for heteroscedastic population variances (hereafter called SMDH; [@Bonnet2008; @Bonnett2009]). Effect sizes were calculated by subtracting the control group mean from the treatment group mean and dividing by the pooled standard deviation. As such, positive effect sizes indicate that female 'fitness/traits' in control groups was higher than female 'fitness/traits' in treatment groups. 
 
 #### Meta-analysis
-We analysed effect size data using the *metafor* @Metafor (vers 2.4.0) package in R @R (vers 4.0.5). To estimate the overall effect of male-harm on female fitness we first fit multi-level meta-analytic models (intercept only) @nakagawa2012methodological. Overall, we collected between `r n_eff_study[1]` to `r n_eff_study[2]` effect sizes per study. To control for sources of non-independence, we included study and species-level random effects @Noble2017. We also fit a model that included a species-level random effect with a phylogenetic correlation matrix derived using the Open Tree of Life Database @rotl. We used Grafen's method @Grafen to derive branch lengths using the R package *ape* @ape (vers 5.4.1). Overall, a model containing only a species-level random effect variance was better supported than a model that estimated a phylogenetic variance ($\Delta_{AIC_{c}}$ = `r dAICc`). As such, we did not include phylogeny in our models. Study and species-level random effects cannot account for additional sources of within-study non-independence, such as effect sizes derived from common treatment groups or effect sizes derived from different traits measured on the same individuals @Noble2017. We therefore applied robust variance estimators (RVEs) to correct standard errors from our models and ensure that our results were robust. RVEs have been shown to be robust estimators of standard errors from meta-analytic models when effect sizes within studies are correlated. In addition, one does not need to assume or specify how such effects are correlated @Song2021; @NakagawaEcology, making them easier to apply. 
+We analysed effect size data using the *metafor* @Metafor (vers 2.4.0) package in R @R (vers 4.0.5). To estimate the overall effect of male-harm on female fitness we first fit multi-level meta-analytic models (intercept only) @nakagawa2012methodological. We plotted overall meta-analytic means using an orchard plot package @NakaOrchard. Overall, we collected between `r n_eff_study[1]` to `r n_eff_study[2]` effect sizes per study. To control for sources of non-independence, we included study and species-level random effects @Noble2017. We also fit a model that included a species-level random effect with a phylogenetic correlation matrix derived using the Open Tree of Life Database @rotl. We used Grafen's method @Grafen to calculate branch lengths using the R package *ape* @ape (vers 5.4.1). Overall, a model containing only a species-level random effect variance was better supported than a model that estimated a phylogenetic variance ($\Delta_{AIC_{c}}$ = `r dAICc`). As such, we did not include phylogeny in our models. Study and species-level random effects cannot account for additional sources of within-study non-independence, such as effect sizes calculated from using common treatment groups or for different traits measured on the same individuals @Noble2017. We therefore applied robust variance estimators (RVEs) to correct standard errors from our models. RVEs have been shown to be robust estimators of standard errors from meta-analytic models when effect sizes within studies are correlated. In addition, one does not need to assume, or specify, how such effects are correlated [@Song2021; @NakagawaEcology], making them easier to apply. 
 
-Using our MLMA models we estimated effect size heterogenity as $I^2$ @HigginsThompson; @nakagawa2012methodological. $I^2_{study}$ and $I^2_{species}$ were the proportion of effect size variance over total variance as a result of between study and species effects, respectively. $I^2_{total}$ was calculated as the proportion of total effect size variance after accounting for, or removing, total sampling variance. 
+Using our MLMA models we estimated effect size heterogenity as $I^2$ [@HigginsThompson; @nakagawa2012methodological]. $I^2_{study}$ and $I^2_{species}$ were the proportion of effect size variance over total variance as a result of between study and species effects, respectively. $I^2_{total}$ was calculated as the proportion of total effect size variance after accounting for, or removing, total sampling variance. 
 
-We explored drivers of effect size heterogenity using multi-level meta-regression (MLMR) models. Our models included fixed effects (i.e., moderators) that we *a priori* predicted would impact female fitness. More specifically, we predicted that the intensity of sexual selection and sexual conflict would impact how much harm males did to females. To test these predictions, we included an index of sexual size dimorphism (SSD), which involved taking the log transfomed ratio between male body size to female body size for the species (i.e.,  $log \left( \frac{Male_{body size}}{Female_{bodysize}} \right)$, hereafter referred to as SSD). Positive SSD values indicate species with larger males compared to females, whereas negative SSD values indicate speceis where females are larger than males. While this does not directly measure the intensity of sexual selection, it is a proxy for it, and has been used in numerous meta-analyses in the past (CITE). 
+We explored drivers of effect size heterogenity using multi-level meta-regression (MLMR) models. Our models included fixed effects (i.e., moderators) that we *a priori* predicted would impact female fitness. More specifically, we predicted that the intensity of sexual selection and sexual conflict would affect how much harm males did to females. To test these predictions, we included an index of sexual size dimorphism (SSD), which involved taking the log transfomed ratio between male body size to female body size for the species (i.e.,  $log \left( \frac{Male_{body size}}{Female_{bodysize}} \right)$, hereafter referred to as SSD). Positive SSD values indicate species with larger males compared to females, whereas negative SSD values indicate speceis where females are larger than males. While this does not directly measure the intensity of sexual selection, it is a proxy for it, and has been used in numerous meta-analyses in the past (CITE). 
 
-In addition to SSD, we also categorised effect sizes as having come from species with different types of male harm. These include species with direct male harm (i.e., species with traumatic insemination) as well as species with indirect male harm (i.e., species that harm females through harrassment). There are also a number of species where it is clear both direct and indirect forms of male harm exist. Given that MLMR models assume homogeneity of variances across the levels of categorical moderators, and this assumption appeared to violated when visually inspecting the data (Figure \@ref(fig:maleharm)), we also fit a model that assumed heterogeneous residual variance across the different levels of male harm type moderator (i.e., different residual variance for 'Both', 'Direct' and 'Indirect' male harm type). We compared this model to a homogeneous variance model using $AIC_{c}$. Overall, the heterogeneous variance model did not improve overall fit ($\Delta_{AIC_{c}}$ = `r d_aicc_het`), and so, we report on the model assuming homogeneity of variance. 
+In addition to SSD, we also categorised effect sizes as having come from species with different types of male harm. These included species with direct male harm (i.e., species with traumatic insemination) as well as species with indirect male harm (i.e., species that harm females through harrassment). There are also a number of species where it is clear both direct and indirect forms of male harm exist. Given that MLMR models assume homogeneity of variances across the levels of categorical moderators, and this assumption appeared to violated when visually inspecting the data (Figure \@ref(fig:maleharm)), we also fit a model that assumed heterogeneous residual variance across the different levels of male harm type moderator (i.e., different residual variance for 'Both', 'Direct' and 'Indirect' male harm type). We compared this model to a homogeneous variance model using $AIC_{c}$. Overall, the heterogeneous variance model did not improve overall fit ($\Delta_{AIC_{c}}$ = `r d_aicc_het`), and so, we report results from the homogeneity of variance model. 
 
 #### Publication Bias
 
@@ -156,7 +174,7 @@ Experimentally manipulating female harm resulted in a strong decrease in female 
 
 When accounting for sampling variance there was high effect size heterogeneity ($I^2_{Total}$ = `r hetero_table$I2_Est.[nrow(hetero_table)]`, 95% CI: `r hetero_table[nrow(hetero_table), "2.5% CI"]` to `r hetero_table[nrow(hetero_table), "97.5% CI"]`) with most variance being the result of between study ($I^2_{Study}$ = `r hetero_table$I2_Est.[1]`, 95% CI: `r hetero_table[1, "2.5% CI"]` to `r hetero_table[1, "97.5% CI"]`) and between species ($I^2_{Species}$ = `r hetero_table$I2_Est.[3]`, 95% CI: `r hetero_table[3, "2.5% CI"]` to `r hetero_table[3, "97.5% CI"]`) effects. The trait type and phylogeny explained much less variation overall ($I^2_{Trait}$ = `r hetero_table$I2_Est.[2]`, 95% CI: `r hetero_table[2, "2.5% CI"]` to `r hetero_table[2, "97.5% CI"]`; $I^2_{Phylogeny}$ = `r hetero_table_phylo$I2_Est.[5]`, 95% CI: `r hetero_table_phylo[5, "2.5% CI"]` to `r hetero_table_phylo[5, "97.5% CI"]`). 
 
-```{r funnel, fig.height=5, fig.width=16, fig.cap="A) Funnel plot of effect size as a function of precision (i.e., inverse of sampling standard error). B) orchaRd plot of the overall meta-analytic mean efect size, 95% confidnece intervals (thick black bars) and 95% prediction intervals (whiskers)"}
+```{r funnel, fig.height=7.62500, fig.width=14.90278, fig.cap="A) Funnel plot of effect size as a function of precision (i.e., inverse of sampling standard error). B) orchaRd plot of the overall meta-analytic mean efect size, 95% confidnece intervals (thick black bars) and 95% prediction intervals (whiskers)"}
 p1 <- ggplot(data, aes(x = SMDH, y = 1 / sqrt(v_SMDH), xmin = -6, xmax = 6)) +
 geom_point(aes(colour = class)) +
 labs(x = "SMDH", 
@@ -166,7 +184,11 @@ scale_color_grey() +
 #scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9")) + 
 theme_bw() 
 
-p2 <- orchard_plot(model1.1, mod = "Int", xlab = "SMDH") + scale_colour_manual(values = "grey") + scale_fill_manual(values = "red")
+p2 <- orchard_plot(model1.1, mod = "Int", xlab = "SMDH") + 
+      scale_colour_manual(values = "grey") + 
+      scale_fill_manual(values = "red") +
+      labs(y = "Overall Meta-analytic Mean") +
+      scale_y_discrete(labels = "")
 
 p1 + p2 + plot_annotation(tag_levels = c('A', 'B'))
 
@@ -194,42 +216,81 @@ ft %>%
 
 #### Negative effects on fitness depend on the type of harm done to females
 
-Male harm type impacted the overall magnitude of effects. 
+Male harm type impacted the overall magnitude of effects explaining `r male_harm_r2[1]*100`% of effect size variance (Figure \@ref(fig:maleharm)). Species where mating results in both direct and indirect harm to females have males that significantly impact female fitness (overall meta-analytic mean: `r robust_model1.5_2$beta[1]`, 95% CI: `r robust_model1.5_2$ci.lb[1]` to `r robust_model1.5_2$ci.ub[1]`,  p = `r p_value(robust_model1.5_2$pval[1])`). Surprisingly, however, species with direct female harm only (i.e., traumatic insemination), showed a small and opposite effect on female fitness (overall meta-analytic mean: `r robust_model1.5_2$beta[2]`, 95% CI: `r robust_model1.5_2$ci.lb[2]` to `r robust_model1.5_2$ci.ub[2]`; Figure \@ref(fig:maleharm)), however, this effect did not differ significantly from zero (p = `r p_value(robust_model1.5_2$pval[2])`). While indirect male harm also resulted in a smaller overall meta-analytic mean relative to species with both, it was still significantly positive (overall meta-analytic mean: `r robust_model1.5_2$beta[3]`, 95% CI: `r robust_model1.5_2$ci.lb[3]` to `r robust_model1.5_2$ci.ub[3]`,  p = `r p_value(robust_model1.5_2$pval[3])`), and only marginally different than species with both direct and indirect male harm (Figure \@ref(fig:maleharm)).
 
-```{r maleharm, fig.width=6, fig.height=4.5}
-
-
+```{r maleharm, fig.width=11.56944, fig.height=7.62500, fig.cap="Distribution of effect sizes, overall meta-analytic mean estimates and 95% confidence intervals (CIs) across species with different types of male harm towards females. Total effect sizes (n) and total number of studies (k) are provided for each level of Male Harm Type. Relevant contrasts between meta-analytic means are provided, along with 95% CIs and significance of contrast."}
 
 
-ggplot(data, aes(x = Harm_type, y = SMDH, size = 1/sqrt(v_SMDH), fill = Harm_type, colour = Harm_type)) + geom_violin(alpha = 0.2) + geom_point() + 
-  geom_jitter(width = 0.1) + 
-   	#ggplot2::geom_errorbarh(aes(xmin = lowerPR, xmax = upperPR),  height = 0, show.legend = FALSE, size = 0.5, alpha = 0.6) +
-	  	# 95 %CI: branches
-	  #	ggplot2::geom_errorbarh(aes(xmin = lowerCL, xmax = upperCL),  height = 0, show.legend = FALSE, size = 1.2) +
-	  #	ggplot2::geom_vline(xintercept = 0, linetype = 2, colour = "black", alpha = alpha) + 
-      theme_bw() + 
-		theme(legend.background = element_blank(),
-			           legend.key = element_blank()) + 
-  labs(x = "Harm Type", y = "SMDH", size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$")) +
-  scale_x_discrete(labels = c("Both", "Direct", "Indirect")) +
-  guides(size = guide_legend(override.aes = list(linetype = 0))) + 
-   scale_colour_discrete(guide = FALSE) +
-  scale_fill_discrete(guide = FALSE) + 
-  #ggplot2::annotate('text', x = (max(data$yi) + (max(data$yi)*0.10)), y = (seq(1, group_no, 1)+0.3), label= paste("italic(k)==", mod_table$K), parse = TRUE, hjust = "right", size = 3.5)
+# model results
+rownames(robust_model1.5_2_PI) <- 1:dim(robust_model1.5_2_PI)[1]
+robust_model1.5_2_PI$moderator <- c("both", "direct", "indirect", "SSD")
+# remove last row
+robust_model1.5_2_PI <- robust_model1.5_2_PI[1:3,]
+
+# We'll use the contrast model to get what we need to plot stats above comparison bars
+
+contrast1 <- paste0("$\\beta_{contrast}$ = ", round(robust_model1.5$beta[2], digit = 2), ", 95% CI:", round(robust_model1.5$ci.lb[2], digit = 2), " to ", round(robust_model1.5$ci.ub[2], digit = 2), ", $\\textbf{p ", p_value(robust_model1.5$pval[2]), "}$")
+
+contrast2 <- paste0("$\\beta_{contrast}$ = ", round(robust_model1.5$beta[3], digit = 2), ", 95% CI:", round(robust_model1.5$ci.lb[3], digit = 2), " to ", round(robust_model1.5$ci.ub[3], digit = 2), ", p = ", p_value(robust_model1.5$pval[3]))
+
+# When making this plot we are feeding in two different types of data. This can be a tad tricky because you need to understand how data is mapped. See nice explanation here:https://stackoverflow.com/questions/31069324/adding-points-from-other-dataset-to-ggplot2
+
+harm_plot <- ggplot(data, aes(x = Harm_type, y = SMDH)) + 
+              geom_violin(alpha = 0.2, aes(fill = Harm_type, colour = Harm_type)) + 
+              #geom_point() + don't need this because we have geom_jitter. It will otherwise double plot points
+              ylim(c(-2, 6.5)) + 
+              geom_jitter(aes(x = Harm_type, y = SMDH, fill = Harm_type, colour = Harm_type, size = 1/sqrt(v_SMDH)),
+                          width = 0.08, alpha = 0.2) + 
+              theme_bw() + 
+		          theme(legend.background = element_blank(),
+			                     legend.key = element_blank()) + 
+              labs(x = "Harm Type", 
+                   y = "SMDH", 
+                   size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$")) +
+              scale_x_discrete(labels = c("Both", "Direct", "Indirect")) +
+              guides(size = guide_legend(override.aes = list(linetype = 0))) + 
+              scale_colour_discrete(guide = FALSE) +
+              scale_fill_discrete(guide = FALSE) + 
+              annotate('text', x = (seq(1, 3, 1)), y = 6.45, 
+                       label= paste0("italic(n)==", robust_model1.5_2_PI$n), parse = TRUE, size = 3.5) +     
+              annotate('text', x = (seq(1, 3, 1)), y = 6.15, 
+                       label= paste0("italic(k)==", robust_model1.5_2_PI$nstudy), parse = TRUE, size = 3.5) +     
+        	  	# 95 %CI: branches
+        	    geom_errorbar(data = robust_model1.5_2_PI,  aes(x = moderator, y = Est, ymin = lwr.CI, ymax = up.CI), 
+        	                  height = 0, show.legend = FALSE, size = 0.5, width = 0.05) +
+              geom_point(data = robust_model1.5_2_PI, aes(x = moderator, y = Est, colour= moderator), size = 5)+
+              geom_segment(aes(x = 1, y = 4.8, xend = 2, yend = 4.8), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) + 
+              geom_segment(aes(x = 1, y = 5.5, xend = 3, yend = 5.5), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) +
+              #geom_segment(aes(x = 2, y = -1, xend = 3, yend = -1), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both"))
+              annotate('text', x = 1 + ((2-1) / 2), y = 5, label = TeX(contrast1), size = 4) + 
+              annotate('text', x = 1 + ((3-1) / 2), y = 5.7, label = TeX(contrast2), size = 4) 
+              #annotate('text', x = 2 + ((2-1) / 2), y = -1, label = TeX(contrast3), size = 2.5)
+
+harm_plot
 ```
 
-#### Female fitness is less compromised in species with reversed sexual size dimorphism (SSD) 
+#### Female fitness is less compromised when sexual size dimorphism is low 
 
-Species where females are larger than males (i.e., negative SSD) are less impacted by sexual conflict compared to spcies where males and females are closer in size or males are larger (i.e., SSD > 0) (z-transformed $\beta_{SSD}$ = `r model1.3$beta[2]`, 95% CI = `r model1.3$ci.lb[2]` to `r model1.3$ci.ub[2]`, Figure \@ref(fig:SSD) , $R^2_{marginal}$ = `r r2_SSD[1]*100`% of effect size variation).
+As males and females of a species become more similar in size (i.e., increasing SSD index converging on 0) female fitness is more negatively impacted when increasing male harm (i.e., larger fitness decrease observed in treatmemt group or a more positive effect size) (unstandardised slope, $\beta_{SSD}$ = `r robust_model1.5_nonZ$beta[4]`, 95% CI = `r robust_model1.5_nonZ$ci.lb[4]` to `r robust_model1.5_nonZ$ci.ub[4]`,  $R^2_{marginal}$ = `r r2_SSD[1]*100`% of effect size variation; Figure \@ref(fig:SSD)). However, the magnitude of slope was marginally non-significant (p = `r p_value(robust_model1.5$pval[4])`). Interestingly, this pattern qualitatively appears to reverse in species where females are larger than males (i.e., SSD > 0; Figure \@ref(fig:SSD)), however, there is only one species where SSD is greater than 0 (i.e., *Idotea balthica*), making any broad conclusions quantitatively premature.
 
-```{r SSD, fig.width=6, fig.height=4.5, fig.cap="Sex dimorphism"}
-p3 = ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDH))) + 
-    geom_point() + 
+```{r SSD, fig.width=11.56944, fig.height=7.62500, fig.cap="Relationship between index of sexual size dimorphism for species (log(male/female)) and effect sizes (i.e., Heteroscedastic Standardised Mean Differences (SMDH)). Note that we provide an estimate of stndardised slope (from a model with z-transformed SSD index), along with 95% CIs and significance. A slope from a model using unstandardised SSD index is plotted along with raw data for ease of interpretation and is provided in text."}
+contrast3top <- paste0("Standardised $\\beta_{SSD}$ = ", round(robust_model1.5$beta[4], digit = 2)) 
+contrast3bottom <- paste0("95% CI: ", round(robust_model1.5$ci.lb[4], digit = 2), " to ", round(robust_model1.5$ci.ub[4], digit = 2))
+contrast3bottom2 <- paste0("p = ", p_value(robust_model1.5$pval[4]))
+
+p3 = ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDH), colour = Harm_type)) + 
+    geom_point(alpha = 0.6) + 
       theme_bw() + 
   labs(x = "Sexual Size Dimorphism (SSD) Index", 
 	     y = "SMDH",
-	  size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$")) +
-	guides(size = guide_legend(direction = "vertical"))
+	  size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$"),
+	  colour = "Male Harm Type") +
+  scale_colour_discrete(labels = c("Both", "Direct", "Indirect")) +
+	guides(size = guide_legend(direction = "vertical")) +
+  annotate('text', x = -0.4, y = 4.5, label = TeX(contrast3top), size = 5) +
+  annotate('text', x = -0.4, y = 4.2, label = TeX(contrast3bottom), size = 5) +
+  annotate('text', x = -0.4, y = 3.9, label = TeX(contrast3bottom2, italic = TRUE), size = 5) +
+  geom_abline(intercept = robust_model1.3_nonZ$beta[1], slope = robust_model1.3_nonZ$beta[2]) # Note using model1.3 for plotting because this is marginalised across Harm_type. 
 
 p3
 ```
