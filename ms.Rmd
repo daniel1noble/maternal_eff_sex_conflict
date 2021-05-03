@@ -36,7 +36,7 @@ eval(metafor:::.MuMIn)
 ################
 # Tree
 ################
-source("./R/func.R")  
+      source("./R/func.R")  
       data <- read.csv("./data/meta_data.csv")
       data <- data %>% 
               mutate(species2 = species, 
