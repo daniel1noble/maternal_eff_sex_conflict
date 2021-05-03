@@ -106,6 +106,7 @@ eval(metafor:::.MuMIn)
   
         r2_SSD = r2_ml(model1.3)
 
+  # Marginalised Harmtype        
   model1.4 <- rma.mv(SMDH ~ Harm_type, V = data$v_SMDH, 
                      random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data)
   robust(model1.4, cluster = data$study)
@@ -114,8 +115,21 @@ eval(metafor:::.MuMIn)
   
   # Model that contains harm type and SSD. Harmtype appears to have different variances, so I'll check whether it is safe to assume homogeneity of variance across groups
   model1.5 <- rma.mv(SMDH ~  Harm_type + zSSD, V = data$v_SMDH, 
-                     random = list(~1|study, ~1|obs, ~1|species), test = "t", data = data)
+                     random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                     method = "ML", data = data)
   
+  model1.5_inter <- rma.mv(SMDH ~  Harm_type + zSSD + Harm_type:zSSD, V = data$v_SMDH, 
+                     random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                     method = "ML", data = data)
+  
+  # Does SSD effect vary by harm type. No evidence for interaction
+   aicc_ssd_interact <- AICc(model1.5, model1.5_inter)
+  dAICc_ssd_interact <- max(aicc_ssd_interact$AICc) - min(aicc_ssd_interact$AICc)
+  
+  # Update models with REML now
+        model1.5 <- update(model1.5, method = "REML" )
+  
+  # Non Z transform
   model1.5_nonZ <- rma.mv(SMDH ~ Harm_type + SSD_lnRR, V = data$v_SMDH, 
                      random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data)
   robust_model1.5_nonZ <- robust(model1.5_nonZ, cluster = data$study)
@@ -144,6 +158,40 @@ eval(metafor:::.MuMIn)
   robust_model1.5_2_PI$n <- n$n
   robust_model1.5_2_PI$nstudy <- n$nstdy
 
+
+  # Sperm competition intensity. Use ML because comparing fixed effects. 
+  sperm_data <- data %>% filter(!SCR.SCI == "hermaphrodite" & !is.na(zSSD))
+
+  model1.7_inetr <- rma.mv(SMDH ~  SCR.SCI*zSSD, V = sperm_data$v_SMDH, 
+                     random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                     method = "ML", data = sperm_data)
+    
+  model1.7 <- rma.mv(SMDH ~  SCR.SCI + zSSD, V = sperm_data$v_SMDH, 
+                     random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                     method = "ML", data = sperm_data)
+  
+  # Check for interaction
+   # Compare AICc for each model
+    aicc_1.7 <- AICc(model1.7_inetr, model1.7)
+  d_aicc_1.7 <- max(aicc_1.7$AICc) - min(aicc_1.7$AICc) # Main effect model better supported
+  
+  # Robust
+         model1.7 <- update(model1.7, method = "REML")
+  robust_model1.7 <- robust(model1.7, cluster = sperm_data$study, vcov = "CR2")
+  
+
+  model1.7_reparam <- rma.mv(SMDH ~ 0 +  SCR.SCI + zSSD, V = sperm_data$v_SMDH, 
+                     random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                     method = "REML", data = sperm_data)
+  robust_model1.7_reparam <- robust(model1.7_reparam, cluster = sperm_data$study, vcov = "CR2")
+  
+  # Tables
+                n1.7 <- sperm_data %>% group_by(SCR.SCI) %>% summarise(n = n(), nstdy = length(unique(study)), moderator = unique(SCR.SCI))
+      n1.7[3,c(2,3)] <- t(c(dim(data)[1], with(data, length(unique(study)))))
+  robust_model1.7_PI <- pred_interval(robust_model1.7_reparam, c(4.404, 1.88, 2.49)) # Ignore PIs not used and not correct
+  robust_model1.7_PI <- cbind(robust_model1.7_PI, n1.7)
+  
+  
 ```
 # Methods
 #### Standardised Effect Size Measure
@@ -271,7 +319,7 @@ harm_plot
 
 #### Female fitness is less compromised when sexual size dimorphism is low 
 
-As males and females of a species become more similar in size (i.e., increasing SSD index converging on 0) female fitness is more negatively impacted when increasing male harm (i.e., larger fitness decrease observed in treatmemt group or a more positive effect size) (unstandardised slope, $\beta_{SSD}$ = `r robust_model1.5_nonZ$beta[4]`, 95% CI = `r robust_model1.5_nonZ$ci.lb[4]` to `r robust_model1.5_nonZ$ci.ub[4]`,  $R^2_{marginal}$ = `r r2_SSD[1]*100`% of effect size variation; Figure \@ref(fig:SSD)). However, the magnitude of slope was marginally non-significant (p = `r p_value(robust_model1.5$pval[4])`). Interestingly, this pattern qualitatively appears to reverse in species where females are larger than males (i.e., SSD > 0; Figure \@ref(fig:SSD)), however, there is only one species where SSD is greater than 0 (i.e., *Idotea balthica*), making any concrete conclusions premature.
+As males and females of a species become more similar in size (i.e., increasing SSD index converging on 0) female fitness is more negatively impacted when increasing male harm (i.e., larger fitness decrease observed in treatmemt group or a more positive effect size) (unstandardised slope, $\beta_{SSD}$ = `r robust_model1.5_nonZ$beta[4]`, 95% CI = `r robust_model1.5_nonZ$ci.lb[4]` to `r robust_model1.5_nonZ$ci.ub[4]`,  $R^2_{marginal}$ = `r r2_SSD[1]*100`% of effect size variation; Figure \@ref(fig:SSD)). However, the magnitude of slope was marginally non-significant (p = `r p_value(robust_model1.5$pval[4])`). In addition, there was no evidence that the effect of SSD varied according to the type of male harm exhibited (i.e., no interaction between Harm Type and SSD; $\Delta_{AIC_{c}}$ =`r dAICc_ssd_interact`, with the main effects model having the lowest $AIC_{c}$). Interestingly, this pattern qualitatively appears to reverse in species where females are larger than males (i.e., SSD > 0; Figure \@ref(fig:SSD)), however, there is only one species where SSD is greater than 0 (i.e., *Idotea balthica*), making any concrete conclusions premature. 
 
 ```{r SSD, fig.width=11.56944, fig.height=7.62500, fig.cap="Relationship between index of sexual size dimorphism for species (log(male/female)) and effect sizes (i.e., Heteroscedastic Standardised Mean Differences (SMDH)). Note that we provide an estimate of stndardised slope (from a model with z-transformed SSD index), along with 95% CIs and significance. A slope from a model using unstandardised SSD index is plotted along with raw data for ease of interpretation and is provided in text."}
 contrast3top <- paste0("Standardised $\\beta_{SSD}$ = ", round(robust_model1.5$beta[4], digit = 2)) 
@@ -295,4 +343,50 @@ p3 = ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDH), colour = Ha
 p3
 ```
 
+
+#### Sperm competition intensity
+
+Species with higher sperm intensity had a tendeny to have significantly larger effect sizes overall (overall meta-analytic mean: `r robust_model1.7_reparam$beta[1]`, 95% CI: `r robust_model1.7_reparam$ci.lb[1]` to `r robust_model1.7_reparam$ci.ub[1]`, p = `r p_value(robust_model1.7_reparam$pval[1])`; Figure \@ref(fig:sperm)). 
+
+```{r sperm, fig.width = 7.625, fig.height = 6.750, fig.cap="Species sperm competition intensity and the effect of changes in male harm on female fitness. }
+
+sperm_data <- data %>% filter(!SCR.SCI == "hermaphrodite")
+
+contrast_sperm <- paste0("$\\beta_{contrast}$ = ", round(robust_model1.7$beta[2], digit = 2))
+
+contrast_sperm2 <- paste0("95% CI:", round(robust_model1.7$ci.lb[2], digit = 2), " to ", round(robust_model1.7$ci.ub[2], digit = 2))
+
+contrast_sperm3 <- paste0("p = ", p_value(robust_model1.7$pval[2]))
+
+sperm_plot = ggplot(sperm_data, aes(x = SCR.SCI, y = SMDH)) + 
+              geom_violin(alpha = 0.1, aes(fill = SCR.SCI, colour = SCR.SCI)) + 
+              geom_jitter(aes(x = SCR.SCI, y = SMDH, fill = SCR.SCI, colour = SCR.SCI, size = 1/sqrt(v_SMDH)),
+                          width = 0.08, alpha = 0.1) + 
+              ylim(c(-1.5, 6))+
+              theme_bw() + 
+		          theme(legend.background = element_blank(),
+			                     legend.key = element_blank()) + 
+              labs(x = "Sperm Competition Intensity", 
+                   y = "SMDH", 
+                   size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$")) +
+              #scale_x_discrete(labels = c("Both", "Direct", "Indirect")) +
+              guides(size = guide_legend(override.aes = list(linetype = 0))) + 
+              scale_colour_discrete(guide = FALSE) +
+              scale_fill_discrete(guide = FALSE) + 
+              annotate('text', x = (seq(1, 2, 1)), y = 6, 
+                       label= paste0("italic(n)==", robust_model1.7_PI$n[1:2]), parse = TRUE, size = 3.5) +     
+              annotate('text', x = (seq(1, 2, 1)), y = 5.7, 
+                       label= paste0("italic(k)==", robust_model1.7_PI$nstdy[1:2]), parse = TRUE, size = 3.5) +     
+        	  	# 95 %CI: branches
+        	    geom_errorbar(data = robust_model1.7_PI,  aes(x = moderator, y = Est, ymin = lwr.CI, ymax = up.CI), 
+                            show.legend = FALSE, size = 0.5, width = 0.05) +
+              geom_point(data = robust_model1.7_PI, aes(x = moderator, y = Est, colour= moderator), size = 5) +
+              geom_segment(aes(x = 1, y = 5.3, xend = 2, yend = 5.3), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) + 
+  annotate('text', x = 1.5, y = 5, label = TeX(contrast_sperm), size = 3) + 
+    annotate('text', x = 1.5, y = 4.6, label = TeX(contrast_sperm2), size = 3) + 
+    annotate('text', x = 1.5, y = 4.2, label = TeX(contrast_sperm3), size = 3)
+
+sperm_plot
+
+```
 # References
