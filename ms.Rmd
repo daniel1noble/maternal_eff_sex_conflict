@@ -179,7 +179,16 @@ eval(metafor:::.MuMIn)
          model1.7 <- update(model1.7, method = "REML")
   robust_model1.7 <- robust(model1.7, cluster = sperm_data$study, vcov = "CR2")
   
-
+  
+  # Fit het variance model
+  model1.7_het <- rma.mv(SMDH ~ SCR.SCI + zSSD, V = sperm_data$v_SMDH, 
+                     random = list(~1|study, ~(1 + SCR.SCI)|obs, ~1|species), 
+                     rho = 0, struc = "HCS", test = "t", data = sperm_data)
+  
+  aicc_1.7_het <- AICc(model1.7_het, model1.7)
+   d_aicc_1.7_het <- max(aicc_1.7_het$AICc) - min(aicc_1.7_het$AICc)
+   
+   
   model1.7_reparam <- rma.mv(SMDH ~ 0 +  SCR.SCI + zSSD, V = sperm_data$v_SMDH, 
                      random = list(~1|study, ~1|obs, ~1|species), test = "t", 
                      method = "REML", data = sperm_data)
@@ -198,13 +207,17 @@ eval(metafor:::.MuMIn)
 We used the standardised mean difference with a small sample correction (i.e., Hedges' *g*) as our measure of effect size comparing female fitness measures across experimental treatments. To correct for the possibility that population variances in the two treatments differ, we made use of a corrected version of Hedges' *g* that controls for heteroscedastic population variances (hereafter called SMDH; [@Bonnet2008; @Bonnett2009]). Effect sizes were calculated by subtracting the control group mean from the treatment group mean and dividing by the pooled standard deviation. As such, positive effect sizes indicate that female 'fitness/traits' in control groups was higher than female 'fitness/traits' in treatment groups. 
 
 #### Meta-analysis
-We analysed effect size data using the *metafor* @Metafor (vers 2.4.0) package in R @R (vers 4.0.5). To estimate the overall effect of male-harm on female fitness we first fit multi-level meta-analytic models (intercept only) @nakagawa2012methodological. We plotted overall meta-analytic means using an orchard plot package @NakaOrchard. Overall, we collected between `r n_eff_study[1]` to `r n_eff_study[2]` effect sizes per study. To control for sources of non-independence, we included study and species-level random effects @Noble2017. We also fit a model that included a species-level random effect with a phylogenetic correlation matrix derived using the Open Tree of Life Database @rotl. We used Grafen's method @Grafen to calculate branch lengths using the R package *ape* @ape (vers 5.4.1). Overall, a model containing only a species-level random effect variance was better supported than a model that estimated a phylogenetic variance ($\Delta_{AIC_{c}}$ = `r dAICc`). As such, we did not include phylogeny in our models. Study and species-level random effects cannot account for additional sources of within-study non-independence, such as effect sizes calculated using common treatment groups or for different traits measured on the same individuals @Noble2017. We therefore applied robust variance estimators (RVEs) to correct standard errors from our models. RVEs have been shown to be excellent estimators of standard errors from meta-analytic models when effect sizes within studies are correlated. In addition, one does not need to assume, or specify, how such effects are correlated [@Song2021; @NakagawaEcology], making them easier to apply. 
+We analysed effect size data using the *metafor* @Metafor (vers 2.4.0) package in R @R (vers 4.0.5). To estimate the overall effect of male-harm on female fitness we first fit multi-level meta-analytic models (intercept only) @nakagawa2012methodological. We plotted overall meta-analytic means using the orchard plot package @NakaOrchard. Overall, we collected between `r n_eff_study[1]` to `r n_eff_study[2]` effect sizes per study. To control for sources of non-independence, we included study and species-level random effects @Noble2017. We also fit a model that included a species-level random effect with a phylogenetic correlation matrix derived using the Open Tree of Life Database @rotl. We used Grafen's method @Grafen to calculate branch lengths using the R package *ape* @ape (vers 5.4.1). Overall, a model containing only a species-level random effect variance was better supported than a model that estimated a phylogenetic variance ($\Delta_{AIC_{c}}$ = `r dAICc`). As such, we did not include phylogeny in our models. 
+
+Study and species-level random effects cannot account for additional sources of within-study non-independence, such as effect sizes calculated using common treatment groups or for different traits measured on the same individuals @Noble2017. We therefore applied robust variance estimators (RVEs) to correct standard errors from our models. RVEs have been shown to be excellent estimators of standard errors from meta-analytic models when effect sizes within studies are correlated. In addition, one does not need to assume, or specify, how such effects are correlated [@Song2021; @NakagawaEcology], making them easier to apply. 
 
 Using our MLMA models we also calculated effect size heterogenity using $I^2$ [@HigginsThompson; @nakagawa2012methodological]. $I^2_{study}$ and $I^2_{species}$ are defined as the proportion of effect size variance over total variance as a result of between study and species effects, respectively.In contrast, $I^2_{total}$ was calculated as the proportion of total effect size variance after accounting for, or removing, total sampling variance. 
 
 We explored drivers of effect size heterogenity using multi-level meta-regression (MLMR) models. Our models included fixed effects (i.e., moderators) that we *a priori* predicted would impact female fitness. More specifically, we predicted that the intensity of sexual selection and sexual conflict would affect how much harm males did to females. To test these predictions, we included an index of sexual size dimorphism (SSD), which involved taking the log transfomed ratio between male body size to female body size for the species (i.e.,  $log \left( \frac{Male_{body size}}{Female_{bodysize}} \right)$, hereafter referred to as SSD). Positive SSD values indicate species with larger males compared to females, whereas negative SSD values indicate species where females are larger than males. While this does not directly measure the intensity of sexual selection, it is a proxy for it, and has been used in numerous meta-analyses in the past (CITE). 
 
-In addition to SSD, we also categorised effect sizes as having come from species with different types of male harm. These included species with direct male harm (i.e., species with traumatic insemination) as well as species with indirect male harm (i.e., species that harm females through harrassment). There are also a number of species where it is clear both direct and indirect forms of male harm exist. Given that MLMR models assume homogeneity of variances across the levels of categorical moderators, and this assumption appeared to violated when visually inspecting the data (Figure \@ref(fig:maleharm)), we also fit a model that assumed heterogeneous residual variance across the different levels of male harm type moderator (i.e., different residual variance for 'Both', 'Direct' and 'Indirect' male harm type). We compared this model to a homogeneous variance model using $AIC_{c}$. Overall, the heterogeneous variance model did not improve overall fit ($\Delta_{AIC_{c}}$ = `r d_aicc_het`), and so, we report results from the homogeneity of variance model. 
+In addition to SSD, we also categorised effect sizes as having come from species with different types of male harm and sperm competition intensity (see moderators section). These included species with direct male harm (i.e., species with traumatic insemination) as well as species with indirect male harm (i.e., species that harm females through harrassment). There are also a number of species where it is clear both direct and indirect forms of male harm exist. We also fit seperate models to a two-level categorical moderator describing the sperm competition intensity of the species (i.e, "high" or "low"). In both these models, we controlled for SSD index, but included z-transformed SSD, such that meta-analytic means in each categorical moderator are for species of average SSD. We also accounted for the possibility that SSD might vary dependeing on the specific harm type and sperm competition intensity (i.e., interaction between SSD and Harm type and Sperm competition intensity). We evaluated support for interactions by comparing a model including the interaction to a model without it, comparing $AIC_{c}$ between the two models. We chose the model with the lowest $AIC_{c}$ if they differed by greater than 2, otherwise, we choose the most parsimonious model. All models comparing fixed effects were fit with maximum likelihood for model comparison of fixed effect structure, and then subsequently re-fit with restricted maximum likelihood when the fixed effect structure was identified.
+
+Given that MLMR models assume homogeneity of variances across the levels of categorical moderators, and this assumption appeared to violated when visually inspecting the data (Figure \@ref(fig:maleharm)), we also fit a model that assumed heterogeneous residual variance across the different levels of male harm type moderator (i.e., different residual variance for 'Both', 'Direct' and 'Indirect' male harm type). We compared this model to a homogeneous variance model using $AIC_{c}$. Overall, the heterogeneous variance models did not improve overall fit (Harm Type: $\Delta_{AIC_{c}}$ = `r d_aicc_het`; Sperm Competition Intensity:  $\Delta_{AIC_{c}}$ = `r d_aicc_1.7_het`), and so, we report results from the homogeneity of variance models. 
 
 #### Publication Bias
 
@@ -344,11 +357,11 @@ p3
 ```
 
 
-#### Sperm competition intensity
+#### Male harm in species with high sperm competition intensity does not result in radically reduced female fitness
 
-Species with higher sperm intensity had a tendeny to have significantly larger effect sizes overall (overall meta-analytic mean: `r robust_model1.7_reparam$beta[1]`, 95% CI: `r robust_model1.7_reparam$ci.lb[1]` to `r robust_model1.7_reparam$ci.ub[1]`, p = `r p_value(robust_model1.7_reparam$pval[1])`; Figure \@ref(fig:sperm)). 
+Species with higher sperm intensity exhibited a significant reduction in female fitness with higher male harm (overall meta-analytic mean: `r robust_model1.7_reparam$beta[1]`, 95% CI: `r robust_model1.7_reparam$ci.lb[1]` to `r robust_model1.7_reparam$ci.ub[1]`, p = `r p_value(robust_model1.7_reparam$pval[1])`), wheras the same was not true of species with low sperm intensity (overall meta-analytic mean: `r robust_model1.7_reparam$beta[2]`, 95% CI: `r robust_model1.7_reparam$ci.lb[2]` to `r robust_model1.7_reparam$ci.ub[2]`, p = `r p_value(robust_model1.7_reparam$pval[2])`) (Figure \@ref(fig:sperm)). Overall, there was no significant difference between species deemed to have high sperm intensity compared to those with low sperm intensity (Figure \@ref(fig:sperm)). 
 
-```{r sperm, fig.width = 7.625, fig.height = 6.750, fig.cap="Species sperm competition intensity and the effect of changes in male harm on female fitness. }
+```{r sperm, fig.width = 7.625, fig.height = 6.750, fig.cap="Species sperm competition intensity and the effect of changes in male harm on female fitness."}
 
 sperm_data <- data %>% filter(!SCR.SCI == "hermaphrodite")
 
@@ -381,7 +394,7 @@ sperm_plot = ggplot(sperm_data, aes(x = SCR.SCI, y = SMDH)) +
         	    geom_errorbar(data = robust_model1.7_PI,  aes(x = moderator, y = Est, ymin = lwr.CI, ymax = up.CI), 
                             show.legend = FALSE, size = 0.5, width = 0.05) +
               geom_point(data = robust_model1.7_PI, aes(x = moderator, y = Est, colour= moderator), size = 5) +
-              geom_segment(aes(x = 1, y = 5.3, xend = 2, yend = 5.3), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) + 
+              geom_segment(aes(x = 1, y = 5.35, xend = 2, yend = 5.35), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) + 
   annotate('text', x = 1.5, y = 5, label = TeX(contrast_sperm), size = 3) + 
     annotate('text', x = 1.5, y = 4.6, label = TeX(contrast_sperm2), size = 3) + 
     annotate('text', x = 1.5, y = 4.2, label = TeX(contrast_sperm3), size = 3)
@@ -389,4 +402,5 @@ sperm_plot = ggplot(sperm_data, aes(x = SCR.SCI, y = SMDH)) +
 sperm_plot
 
 ```
+
 # References
