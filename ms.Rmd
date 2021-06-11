@@ -40,7 +40,8 @@ eval(metafor:::.MuMIn)
       data <- read.csv("./data/meta_data.csv")
       data <- data %>% 
               mutate(species2 = species, 
-                     zSSD = scale(SSD_lnRR))
+                     zSSD = scale(SSD_lnRR),
+                     sex_life = log(M_lifespan / F_lifespan))
   
   # Bring in and prune tree
        tree <- read.tree("./phylogeny/tree")
@@ -194,6 +195,30 @@ eval(metafor:::.MuMIn)
                      method = "REML", data = sperm_data)
   robust_model1.7_reparam <- robust(model1.7_reparam, cluster = sperm_data$study, vcov = "CR2")
   
+  # Sex differences in lifespan
+    model1.8 <- rma.mv(SMDH ~ sex_life, V = data$v_SMDH, 
+                       random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                       method = "REML", data = data)
+    robust_model1.8 <- robust(model1.8, cluster = data$study, vcov = "CR2")
+    
+    model1.9 <- rma.mv(SMDH ~ sex_life + zSSD + Harm_type, V = data$v_SMDH, 
+                       random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                       method = "REML", data = data)
+    robust_model1.9 <- robust(model1.8, cluster = data$study, vcov = "CR2")
+    
+  # Female lifespan
+    model1.10 <- rma.mv(SMDH ~ scale(F_LRS), V = data$v_SMDH, 
+                       random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                       method = "REML", data = data)
+    robust_model1.10 <- robust(model1.9, cluster = data$study, vcov = "CR2")
+    
+    model1.11 <- rma.mv(SMDH ~ scale(F_LRS) + Harm_type, V = data$v_SMDH, 
+                       random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                       method = "REML", data = data)
+    robust_model1.11 <- robust(model1.11, cluster = data$study, vcov = "CR2")
+    
+  
+  
   # Tables
                 n1.7 <- sperm_data %>% group_by(SCR.SCI) %>% summarise(n = n(), nstdy = length(unique(study)), moderator = unique(SCR.SCI))
       n1.7[3,c(2,3)] <- t(c(dim(data)[1], with(data, length(unique(study)))))
@@ -258,19 +283,19 @@ p1 + p2 + plot_annotation(tag_levels = c('A', 'B'))
 ```{r pretty_table}
 
 autonum <- officer::run_autonum(seq_id = "tab", pre_label = "Table 1", bkm_all = TRUE)
-ft <- flextable(table1)
-ft <- set_caption(ft,  caption = "Effect size", autonum = autonum)
+ft <- flextable::flextable(table1)
+ft <- flextable::set_caption(ft,  caption = "Effect size", autonum = autonum)
 ft %>%
-  compose(part = "header", j = "n", value = as_paragraph("n", as_sub("effects"))) %>%
-  compose(part = "header", j = "std", value = as_paragraph("n", as_sub("studies"))) %>%
-  compose(part = "header", j = "spp", value = as_paragraph("n", as_sub("species"))) %>%
-  compose(part = "header", j = "est", value = as_paragraph("Meta-analytic mean")) %>%
-  compose(part = "header", j = "CI", value = as_paragraph("95% CI")) %>%
-  compose(part = "header", j = "PI", value = as_paragraph("95% PI")) %>%
-  compose(part = "header", j = "i2_stdy", value = as_paragraph("I", as_sup("2"), as_sub("study"))) %>%
-  compose(part = "header", j = "i2_trait", value = as_paragraph("I", as_sup("2"), as_sub("trait"))) %>%
-  compose(part = "header", j = "i2_species", value = as_paragraph("I", as_sup("2"), as_sub("species"))) %>%
-  compose(part = "header", j = "i2_tot", value = as_paragraph("I", as_sup("2"), as_sub("total")))
+  flextable::compose(part = "header", j = "n", value = as_paragraph("n", as_sub("effects"))) %>%
+  flextable::compose(part = "header", j = "std", value = as_paragraph("n", as_sub("studies"))) %>%
+  flextable::compose(part = "header", j = "spp", value = as_paragraph("n", as_sub("species"))) %>%
+  flextable::compose(part = "header", j = "est", value = as_paragraph("Meta-analytic mean")) %>%
+  flextable::compose(part = "header", j = "CI", value = as_paragraph("95% CI")) %>%
+  flextable::compose(part = "header", j = "PI", value = as_paragraph("95% PI")) %>%
+  flextable::compose(part = "header", j = "i2_stdy", value = as_paragraph("I", as_sup("2"), as_sub("study"))) %>%
+  flextable::compose(part = "header", j = "i2_trait", value = as_paragraph("I", as_sup("2"), as_sub("trait"))) %>%
+  flextable::compose(part = "header", j = "i2_species", value = as_paragraph("I", as_sup("2"), as_sub("species"))) %>%
+  flextable::compose(part = "header", j = "i2_tot", value = as_paragraph("I", as_sup("2"), as_sub("total")))
   
 
 ```
