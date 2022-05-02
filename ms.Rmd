@@ -5,22 +5,22 @@
   bibliography: refs.bib
   csl: pnas.csl
   output: 
+    bookdown::word_document2:
+      toc: no
+      toc_depth: 6
+      number_sections: false
+      reference_docx: template.docx
     bookdown::html_document2:
       code_folding: hide
       number_sections: no
       toc: yes
       toc_depth: 6
       toc_float: yes
-    bookdown::word_document2:
-      toc: no
-      toc_depth: 6
-      number_sections: false
-      reference_docx: template.docx
   editor_options: 
     chunk_output_type: console
 ---
 ```{r setup, include=FALSE}
-  knitr::opts_chunk$set(echo = FALSE, cache = TRUE, message = FALSE, warning = FALSE, tidy = TRUE, fig.width = 10)
+  knitr::opts_chunk$set(echo = FALSE, cache = FALSE, message = FALSE, warning = FALSE, tidy = TRUE, fig.width = 10)
   ## numbers >= 10^5 will be denoted in scientific notation,      ## numbers >= 10^5 will be denoted in scientific notation,
     ## and rounded to 2 digits      ## and rounded to 2 digits
     options(digits = 2)
@@ -151,9 +151,10 @@ eval(metafor:::.MuMIn)
   
   # Now reparameterize model
   model1.5_2 <- rma.mv(SMDH ~ 0 + Harm_type + zSSD, V = data$v_SMDH, 
-                     random = list(~1|study, ~1|obs, ~1|species), test = "t", data = data)
+                     random = list(~1|study, ~1|obs, ~1|species), dfs = "contain", test = "t", data = data)
   
-     robust_model1.5_2 <- robust(model1.5_2, cluster = data$study, vcov = "CR2")
+     robust_model1.5_2 <- robust(model1.5_2, cluster = data$study)
+     
   robust_model1.5_2_PI <- pred_interval(model1.5_2, c(5.1796, -0.6908, 3.0189, 1.9679))
   
   # Add N
@@ -235,7 +236,7 @@ eval(metafor:::.MuMIn)
 We used the standardised mean difference with a small sample correction (i.e., Hedges' *g*) as our measure of effect size comparing female fitness measures across experimental treatments. To correct for the possibility that population variances in the two treatments differ, we made use of a corrected version of Hedges' *g* that controls for heteroscedastic population variances (hereafter called SMDH; [@Bonnet2008; @Bonnett2009]). Effect sizes were calculated by subtracting the control group mean from the treatment group mean and dividing by the pooled standard deviation. As such, positive effect sizes indicate that female 'fitness/traits' in control groups was higher than female 'fitness/traits' in treatment groups. 
 
 #### Meta-analysis
-We analysed effect size data using the *metafor* @Metafor (vers 2.4.0) package in R @R (vers 4.0.5). To estimate the overall effect of male-harm on female fitness we first fit multi-level meta-analytic models (intercept only) @nakagawa2012methodological. We plotted overall meta-analytic means using the orchard plot package @NakaOrchard. Overall, we collected between `r n_eff_study[1]` to `r n_eff_study[2]` effect sizes per study. To control for sources of non-independence, we included study and species-level random effects @Noble2017. We also fit a model that included a species-level random effect with a phylogenetic correlation matrix derived using the Open Tree of Life Database @rotl. We used Grafen's method @Grafen to calculate branch lengths using the R package *ape* @ape (vers 5.4.1). Overall, a model containing only a species-level random effect variance was better supported than a model that estimated a phylogenetic variance ($\Delta_{AIC_{c}}$ = `r dAICc`). As such, we did not include phylogeny in our models. 
+We analysed effect size data using the *metafor* @Metafor (vers `utils::packageVersion("metafor")`) package in R @R (vers `r paste0(R.Version()$major, ".", R.Version()$minor)`). To estimate the overall effect of male-harm on female fitness we first fit multi-level meta-analytic models (intercept only) @nakagawa2012methodological. We plotted overall meta-analytic means using the orchard plot package @NakaOrchard. Overall, we collected between `r n_eff_study[1]` to `r n_eff_study[2]` effect sizes per study. To control for sources of non-independence, we included study and species-level random effects @Noble2017. We also fit a model that included a species-level random effect with a phylogenetic correlation matrix derived using the Open Tree of Life Database @rotl (vers `r utils::packageVersion("rotl")`. We used Grafen's method @Grafen to calculate branch lengths using the R package *ape* @ape (vers `r utils::packageVersion("ape")`). Overall, a model containing only a species-level random effect variance was better supported than a model that estimated a phylogenetic variance ($\Delta_{AIC_{c}}$ = `r dAICc`). As such, we did not include phylogeny in our models. 
 
 Study and species-level random effects cannot account for additional sources of within-study non-independence, such as effect sizes calculated using common treatment groups or for different traits measured on the same individuals @Noble2017. We therefore applied robust variance estimators (RVEs) to correct standard errors from our models. RVEs have been shown to be excellent estimators of standard errors from meta-analytic models when effect sizes within studies are correlated. In addition, one does not need to assume, or specify, how such effects are correlated [@Song2021; @NakagawaEcology], making them easier to apply. 
 
@@ -259,9 +260,9 @@ Across all species, we obtained `r table(data$Gestation)[1]` effects from `r par
 
 #### Manipulating direct and indirect female harm negatively impacts female fitness
 
-Experimentally manipulating female harm resulted in a strong decrease in female fitness overall (i.e., positive effect size with control group females having higher fitness than treatment groups: `r model1.1$beta`, 95% CI: `r model1.1$ci.lb` to `r model1.1$ci.ub`, $n_{effects}$ = `r model1.1$k.all`, $n_{study}$ = `r model1.1$s.nlevels[1]`). This strong effect held even when accounting for within-study non-independence (Meta-analytic mean using Robust Variance Estimator: `r robust$beta`, 95% CI: `r robust$ci.lb` to `r robust$ci.ub`). However, visual inspection of funnel plot asymmetry suggested evidence for publication bias (i.e., missed effects sizes with low precision when female harm was worse in control treatments) (Figure \@ref(fig:funnel)). Evidence for publication bias was confirmed through the identification of a significant slope between effect size and effective sample size ($\beta$ = `r model1.1_pub$beta[2]`, 95% CI: `r model1.1_pub$ci.lb[2]` to `r model1.1_pub$ci.ub[2]`), and this held true when accounting for heterogenity using meta-regression models ($\beta$ =`r model1.1_pub_full$beta[2]`, 95% CI: `r model1.1_pub_full$ci.lb[2]` to `r model1.1_pub_full$ci.ub[2]`). Correcting for the possibility of missing studies resulted in the overall meta-analytic mean effect size being indistinguisable from zero (Corrected meta-analytic mean: `r model1.1_pub$beta[1]`, 95% CI: `r model1.1_pub$ci.lb[1]` to `r model1.1_pub$ci.ub[1]`). These findings suggest that additional empirical studies may change the overall magnitude of effects, possibly showing weaker effects then what is currently published.
+Experimentally manipulating female harm resulted in a strong decrease in female fitness overall (i.e., positive effect size with control group females having higher fitness than treatment groups: `r model1.1$beta`, 95% CI: `r model1.1$ci.lb` to `r model1.1$ci.ub`, $n_{effects}$ = `r model1.1$k.all`, $n_{study}$ = `r model1.1$s.nlevels[1]`). This strong effect held even when accounting for within-study non-independence (Meta-analytic mean using Robust Variance Estimator: `r robust$beta`, 95% CI: `r robust$ci.lb` to `r robust$ci.ub`). Visual inspection of funnel plot asymmetry suggested evidence for publication bias (i.e., missed effects sizes with low precision when female harm was worse in control treatments) (Figure \@ref(fig:funnel)), which was confirmed through the identification of a significant slope between effect size and effective sample size ($\beta$ = `r model1.1_pub$beta[2]`, 95% CI: `r model1.1_pub$ci.lb[2]` to `r model1.1_pub$ci.ub[2]`). This result held true when accounting for heterogeneity using meta-regression models ($\beta$ =`r model1.1_pub_full$beta[2]`, 95% CI: `r model1.1_pub_full$ci.lb[2]` to `r model1.1_pub_full$ci.ub[2]`). Correcting for the possibility of missing studies resulted in the overall meta-analytic mean effect size being indistinguishable from zero (Corrected meta-analytic mean: `r model1.1_pub$beta[1]`, 95% CI: `r model1.1_pub$ci.lb[1]` to `r model1.1_pub$ci.ub[1]`). These findings suggest that additional empirical studies may change the overall magnitude of effects, possibly showing weaker effects then what is currently published, however, it is important to recognise that we cannot know for sure what (if anything) is generating such a bias.
 
-When accounting for sampling variance there was high effect size heterogeneity ($I^2_{Total}$ = `r hetero_table$I2_Est.[nrow(hetero_table)]`, 95% CI: `r hetero_table[nrow(hetero_table), "2.5% CI"]` to `r hetero_table[nrow(hetero_table), "97.5% CI"]`) with most variance being the result of between study ($I^2_{Study}$ = `r hetero_table$I2_Est.[1]`, 95% CI: `r hetero_table[1, "2.5% CI"]` to `r hetero_table[1, "97.5% CI"]`) and between species ($I^2_{Species}$ = `r hetero_table$I2_Est.[3]`, 95% CI: `r hetero_table[3, "2.5% CI"]` to `r hetero_table[3, "97.5% CI"]`) effects. The trait type and phylogeny explained much less variation overall ($I^2_{Trait}$ = `r hetero_table$I2_Est.[2]`, 95% CI: `r hetero_table[2, "2.5% CI"]` to `r hetero_table[2, "97.5% CI"]`; $I^2_{Phylogeny}$ = `r hetero_table_phylo$I2_Est.[5]`, 95% CI: `r hetero_table_phylo[5, "2.5% CI"]` to `r hetero_table_phylo[5, "97.5% CI"]`). 
+When accounting for sampling variance there was high effect size heterogeneity ($I^2_{Total}$ = `r hetero_table$I2_Est.[nrow(hetero_table)]`, 95% CI: `r hetero_table[nrow(hetero_table), "2.5% CI"]` to `r hetero_table[nrow(hetero_table), "97.5% CI"]`) with most variance being the result of between study ($I^2_{Study}$ = `r hetero_table$I2_Est.[1]`, 95% CI: `r hetero_table[1, "2.5% CI"]` to `r hetero_table[1, "97.5% CI"]`) and between species ($I^2_{Species}$ = `r hetero_table$I2_Est.[3]`, 95% CI: `r hetero_table[3, "2.5% CI"]` to `r hetero_table[3, "97.5% CI"]`) effects. The trait type and phylogeny explained much less variation overall ($I^2_{Trait}$ = `r hetero_table$I2_Est.[2]`, 95% CI: `r hetero_table[2, "2.5% CI"]` to `r hetero_table[2, "97.5% CI"]`; $I^2_{Phylogeny}$ = `r hetero_table_phylo$I2_Est.[5]`, 95% CI: `r hetero_table_phylo[5, "2.5% CI"]` to `r hetero_table_phylo[5, "97.5% CI"]`)(Table \@ref(tab:pretty_table). 
 
 ```{r funnel, fig.height=7.62500, fig.width=14.90278, fig.cap="A) Funnel plot of effect size as a function of precision (i.e., inverse of sampling standard error). B) orchaRd plot of the overall meta-analytic mean efect size, 95% confidnece intervals (thick black bars) and 95% prediction intervals (whiskers)"}
 p1 <- ggplot(data, aes(x = SMDH, y = 1 / sqrt(v_SMDH), xmin = -6, xmax = 6)) +
@@ -307,7 +308,6 @@ Male harm type impacted the overall magnitude of effects explaining `r male_harm
 
 ```{r maleharm, fig.width=11.56944, fig.height=7.62500, fig.cap="Distribution of effect sizes, overall meta-analytic mean estimates and 95% confidence intervals (CIs) across species with different types of male harm towards females. Total effect sizes (n) and total number of studies (k) are provided for each level of Male Harm Type. Relevant contrasts between meta-analytic means are provided, along with 95% CIs and significance of contrast."}
 
-
 # model results
 rownames(robust_model1.5_2_PI) <- 1:dim(robust_model1.5_2_PI)[1]
 robust_model1.5_2_PI$moderator <- c("both", "direct", "indirect", "SSD")
@@ -352,7 +352,7 @@ harm_plot <- ggplot(data, aes(x = Harm_type, y = SMDH)) +
               annotate('text', x = 1 + ((2-1) / 2), y = 5, label = TeX(contrast1), size = 4) + 
               annotate('text', x = 1 + ((3-1) / 2), y = 5.7, label = TeX(contrast2), size = 4) 
               #annotate('text', x = 2 + ((2-1) / 2), y = -1, label = TeX(contrast3), size = 2.5)
-
+ggsave(plot = harm_plot, filename = "fig2.png", path = "./output/figs", height = 7.416667, width = 13.805556, device = "png", dpi = 600)
 harm_plot
 ```
 
@@ -379,13 +379,14 @@ p3 = ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDH), colour = Ha
   annotate('text', x = -0.4, y = 3.9, label = TeX(contrast3bottom2, italic = TRUE), size = 5) +
   geom_abline(intercept = robust_model1.3_nonZ$beta[1], slope = robust_model1.3_nonZ$beta[2]) # Note using model1.3 for plotting because this is marginalised across Harm_type. 
 
+ggsave(plot = p3, filename = "fig3.png", path = "./output/figs", height = 7, width = 10, device = "png", dpi = 600)
 p3
 ```
 
 
 #### Male harm in species with high sperm competition intensity does not result in radically reduced female fitness
 
-Species with higher sperm intensity exhibited a significant reduction in female fitness with higher male harm (overall meta-analytic mean: `r robust_model1.7_reparam$beta[1]`, 95% CI: `r robust_model1.7_reparam$ci.lb[1]` to `r robust_model1.7_reparam$ci.ub[1]`, p = `r p_value(robust_model1.7_reparam$pval[1])`), wheras the same was not true of species with low sperm intensity (overall meta-analytic mean: `r robust_model1.7_reparam$beta[2]`, 95% CI: `r robust_model1.7_reparam$ci.lb[2]` to `r robust_model1.7_reparam$ci.ub[2]`, p = `r p_value(robust_model1.7_reparam$pval[2])`) (Figure \@ref(fig:sperm)). Overall, there was no significant difference between species deemed to have high sperm intensity compared to those with low sperm intensity (Figure \@ref(fig:sperm)). 
+Species with higher sperm intensity exhibited a significant reduction in female fitness with higher male harm (overall meta-analytic mean: `r robust_model1.7_reparam$beta[1]`, 95% CI: `r robust_model1.7_reparam$ci.lb[1]` to `r robust_model1.7_reparam$ci.ub[1]`, p = `r p_value(robust_model1.7_reparam$pval[1])`), whereas the same was not true of species with low sperm intensity (overall meta-analytic mean: `r robust_model1.7_reparam$beta[2]`, 95% CI: `r robust_model1.7_reparam$ci.lb[2]` to `r robust_model1.7_reparam$ci.ub[2]`, p = `r p_value(robust_model1.7_reparam$pval[2])`) (Figure \@ref(fig:sperm)). Overall, there was no significant difference between species deemed to have high sperm intensity compared to those with low sperm intensity (Figure \@ref(fig:sperm)). 
 
 ```{r sperm, fig.width = 7.625, fig.height = 6.750, fig.cap="Species sperm competition intensity and the effect of changes in male harm on female fitness."}
 
@@ -425,6 +426,7 @@ sperm_plot = ggplot(sperm_data, aes(x = SCR.SCI, y = SMDH)) +
     annotate('text', x = 1.5, y = 4.6, label = TeX(contrast_sperm2), size = 3) + 
     annotate('text', x = 1.5, y = 4.2, label = TeX(contrast_sperm3), size = 3)
 
+ggsave(plot = sperm_plot, filename = "fig4.png", path = "./output/figs", height = 7, width = 10, device = "png", dpi = 600)
 sperm_plot
 
 ```
