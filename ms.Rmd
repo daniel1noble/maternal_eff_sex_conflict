@@ -80,6 +80,16 @@ eval(metafor:::.MuMIn)
    hetero_table_phylo <- metaAidR::I2(model1.2, v = data$v_SMDH, phylo = "species2", obs = "obs") # Same as orchaRd::i2_ml(model1.1)    
          table1 <- make_table(robust, heteroTable = hetero_table)
 
+        # Just some model checks
+         checks = FALSE
+        
+         if(checks){
+           hist(residuals(model1.1))
+        
+           cd.model1.1 <- cooks.distance(model1.1)
+           plot(cd.model1.1, xlab = "Effect", ylab = "Cook's Distance")
+           abline(h = 4/model1.1$k.all, col = "red", lty = 4)
+        }
 ###################
 # Publication bias. Based on funnel plot, it looks like pub bias. Correct effect as a sensitivity analysis
 ###################
@@ -114,6 +124,13 @@ eval(metafor:::.MuMIn)
   
         r2_SSD = r2_ml(model1.3)
 
+  # Just some model checks.
+    if(checks){
+           hist(residuals(model1.3))
+        
+           cd.model1.3 <- cooks.distance(model1.3)
+           plot.cook(cd.model1.3, model1.3, "obs", data = data)
+        }
   ###############
       # Harm type
   ################
