@@ -29,9 +29,8 @@
 ```{r loadpackages, echo = FALSE, results = "hide"}
   pacman::p_load(tidyverse, metafor, brms, metaAidR, ape, phytools, metaAidR, orchaRd, gt, kableExtra, flextable, patchwork, latex2exp, MuMIn, equatiomatic, magrittr, data.table)
 eval(metafor:::.MuMIn)
-
-  
 ```
+
 ```{r loaddata, echo = FALSE, results = "hide"}
 ################
 # Tree
@@ -61,7 +60,7 @@ eval(metafor:::.MuMIn)
   n_eff_study <- range(n_eff_study$n)
 
 ###################
-# Multilevel Meta-analytic Models (intercept only), plus robust variace estimation test.
+# Multilevel Meta-analytic Models (intercept only), plus robust variance estimation test.
 ###################
   
   model1.1 <- rma.mv(SMDH ~ 1, V = data$v_SMDH, 
@@ -74,7 +73,7 @@ eval(metafor:::.MuMIn)
    aics <- AICc(model1.2, model1.1) # Phylogeny explains very little variation; model without phylogeny better supported, even if slightly. Just keep species in model
   dAICc <- max(aics$AICc) - min(aics$AICc)
 
-# Table 1: Effect, confidemce intervals, prediction intervals, heterogenity
+# Table 1: Effect, confidence intervals, prediction intervals, heterogeneity
    hetero_table <- metaAidR::I2(model1.1, v = data$v_SMDH, obs = "obs") # Same as orchaRd::i2_ml(model1.1)    
    hetero_table_phylo <- metaAidR::I2(model1.2, v = data$v_SMDH, phylo = "species2", obs = "obs") # Same as orchaRd::i2_ml(model1.1)    
          table1 <- make_table(robust, heteroTable = hetero_table)
@@ -90,6 +89,10 @@ eval(metafor:::.MuMIn)
   
   model1.1_pub_full <- rma.mv(SMDH ~ sqrt(inv_n_eff) + SSD_lnRR + Harm_type, V = data$v_SMDH, 
                               random = list(~1|study, ~1|variable, ~1|species, ~1|obs), test = "t", data = data)
+   model1.1_pub_full_het <- rma.mv(SMDH ~ sqrt(inv_n_eff) + SSD_lnRR + Harm_type, V = data$v_SMDH, 
+                              random = list(~1|study, ~1|variable, ~1|species, ~Harm_type|obs), rho = 0, 
+                              str = "HCS", test = "t", data = data)
+      AICc(model1.1_pub_full, model1.1_pub_full_het) # Basically the same results so simplify model.
 
 ###################
 # Meta-regressions
@@ -100,21 +103,21 @@ eval(metafor:::.MuMIn)
                      random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data)
   robust_model1.3 <- robust(model1.3, cluster = data$study)
   
-  # Use raw SSD for plotting, so we can ployt raw data, which is easier to interpret
+  # Use raw SSD for plotting, so we can plot raw data, which is easier to interpret
   model1.3_nonZ <- rma.mv(SMDH ~ SSD_lnRR, V = data$v_SMDH, 
                      random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data)
   robust_model1.3_nonZ <- robust(model1.3_nonZ, cluster = data$study)
   
         r2_SSD = r2_ml(model1.3)
 
-  # Marginalised Harmtype        
+  # Marginalised Harm type        
   model1.4 <- rma.mv(SMDH ~ Harm_type, V = data$v_SMDH, 
                      random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data)
   robust(model1.4, cluster = data$study)
 
   male_harm_r2 = r2_ml(model1.4)
   
-  # Model that contains harm type and SSD. Harmtype appears to have different variances, so I'll check whether it is safe to assume homogeneity of variance across groups
+  # Model that contains harm type and SSD. Harm type appears to have different variances, so I'll check whether it is safe to assume homogeneity of variance across groups
   model1.5 <- rma.mv(SMDH ~  Harm_type + zSSD, V = data$v_SMDH, 
                      random = list(~1|study, ~1|obs, ~1|species), test = "t", 
                      method = "ML", data = data)
@@ -236,11 +239,11 @@ We analysed effect size data using the *metafor* @Metafor (vers 2.4.0) package i
 
 Study and species-level random effects cannot account for additional sources of within-study non-independence, such as effect sizes calculated using common treatment groups or for different traits measured on the same individuals @Noble2017. We therefore applied robust variance estimators (RVEs) to correct standard errors from our models. RVEs have been shown to be excellent estimators of standard errors from meta-analytic models when effect sizes within studies are correlated. In addition, one does not need to assume, or specify, how such effects are correlated [@Song2021; @NakagawaEcology], making them easier to apply. 
 
-Using our MLMA models we also calculated effect size heterogenity using $I^2$ [@HigginsThompson; @nakagawa2012methodological]. $I^2_{study}$ and $I^2_{species}$ are defined as the proportion of effect size variance over total variance as a result of between study and species effects, respectively.In contrast, $I^2_{total}$ was calculated as the proportion of total effect size variance after accounting for, or removing, total sampling variance. 
+Using our MLMA models we also calculated effect size heterogeneity using $I^2$ [@HigginsThompson; @nakagawa2012methodological]. $I^2_{study}$ and $I^2_{species}$ are defined as the proportion of effect size variance over total variance as a result of between study and species effects, respectively.In contrast, $I^2_{total}$ was calculated as the proportion of total effect size variance after accounting for, or removing, total sampling variance. 
 
-We explored drivers of effect size heterogenity using multi-level meta-regression (MLMR) models. Our models included fixed effects (i.e., moderators) that we *a priori* predicted would impact female fitness. More specifically, we predicted that the intensity of sexual selection and sexual conflict would affect how much harm males did to females. To test these predictions, we included an index of sexual size dimorphism (SSD), which involved taking the log transfomed ratio between male body size to female body size for the species (i.e.,  $log \left( \frac{Male_{body size}}{Female_{bodysize}} \right)$, hereafter referred to as SSD). Positive SSD values indicate species with larger males compared to females, whereas negative SSD values indicate species where females are larger than males. While this does not directly measure the intensity of sexual selection, it is a proxy for it, and has been used in numerous meta-analyses in the past (CITE). 
+We explored drivers of effect size heterogeneity using multi-level meta-regression (MLMR) models. Our models included fixed effects (i.e., moderators) that we *a priori* predicted would impact female fitness. More specifically, we predicted that the intensity of sexual selection and sexual conflict would affect how much harm males did to females. To test these predictions, we included an index of sexual size dimorphism (SSD), which involved taking the log transformed ratio between male body size to female body size for the species (i.e.,  $log \left( \frac{Male_{body size}}{Female_{bodysize}} \right)$, hereafter referred to as SSD). Positive SSD values indicate species with larger males compared to females, whereas negative SSD values indicate species where females are larger than males. While this does not directly measure the intensity of sexual selection, it is a proxy for it, and has been used in numerous meta-analyses in the past (CITE). 
 
-In addition to SSD, we also categorised effect sizes as having come from species with different types of male harm and sperm competition intensity (see moderators section). These included species with direct male harm (i.e., species with traumatic insemination) as well as species with indirect male harm (i.e., species that harm females through harrassment). There are also a number of species where it is clear both direct and indirect forms of male harm exist. We also fit seperate models to a two-level categorical moderator describing the sperm competition intensity of the species (i.e, "high" or "low"). In both these models, we controlled for SSD index, but included z-transformed SSD, such that meta-analytic means in each categorical moderator are for species of average SSD. We also accounted for the possibility that SSD might vary dependeing on the specific harm type and sperm competition intensity (i.e., interaction between SSD and Harm type and Sperm competition intensity). We evaluated support for interactions by comparing a model including the interaction to a model without it, comparing $AIC_{c}$ between the two models. We chose the model with the lowest $AIC_{c}$ if they differed by greater than 2, otherwise, we choose the most parsimonious model. All models comparing fixed effects were fit with maximum likelihood for model comparison of fixed effect structure, and then subsequently re-fit with restricted maximum likelihood when the fixed effect structure was identified.
+In addition to SSD, we also categorised effect sizes as having come from species with different types of male harm and sperm competition intensity (see moderators section). These included species with direct male harm (i.e., species with traumatic insemination) as well as species with indirect male harm (i.e., species that harm females through harassment). There are also a number of species where it is clear both direct and indirect forms of male harm exist. We also fit separate models to a two-level categorical moderator describing the sperm competition intensity of the species (i.e, "high" or "low"). In both these models, we controlled for SSD index, but included z-transformed SSD, such that meta-analytic means in each categorical moderator are for species of average SSD. We also accounted for the possibility that SSD might vary depending on the specific harm type and sperm competition intensity (i.e., interaction between SSD and Harm type and Sperm competition intensity). We evaluated support for interactions by comparing a model including the interaction to a model without it, comparing $AIC_{c}$ between the two models. We chose the model with the lowest $AIC_{c}$ if they differed by greater than 2, otherwise, we choose the most parsimonious model. All models comparing fixed effects were fit with maximum likelihood for model comparison of fixed effect structure, and then subsequently re-fit with restricted maximum likelihood when the fixed effect structure was identified.
 
 Given that MLMR models assume homogeneity of variances across the levels of categorical moderators, and this assumption appeared to violated when visually inspecting the data (Figure \@ref(fig:maleharm)), we also fit a model that assumed heterogeneous residual variance across the different levels of male harm type moderator (i.e., different residual variance for 'Both', 'Direct' and 'Indirect' male harm type). We compared this model to a homogeneous variance model using $AIC_{c}$. Overall, the heterogeneous variance models did not improve overall fit (Harm Type: $\Delta_{AIC_{c}}$ = `r d_aicc_het`; Sperm Competition Intensity:  $\Delta_{AIC_{c}}$ = `r d_aicc_1.7_het`), and so, we report results from the homogeneity of variance models. 
 
@@ -262,7 +265,7 @@ When accounting for sampling variance there was high effect size heterogeneity (
 
 ```{r funnel, fig.height=7.62500, fig.width=14.90278, fig.cap="A) Funnel plot of effect size as a function of precision (i.e., inverse of sampling standard error). B) orchaRd plot of the overall meta-analytic mean efect size, 95% confidnece intervals (thick black bars) and 95% prediction intervals (whiskers)"}
 p1 <- ggplot(data, aes(x = SMDH, y = 1 / sqrt(v_SMDH), xmin = -6, xmax = 6)) +
-geom_point(aes(colour = class)) +
+geom_point(aes(colour = class), size = 3) +
 labs(x = "SMDH", 
 	 y = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$"),
 	 colour = "Class") +
@@ -270,21 +273,20 @@ scale_color_grey() +
 #scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9")) + 
 theme_bw() 
 
-p2 <- orchard_plot(model1.1, mod = "Int", xlab = "SMDH") + 
+p2 <- orchard_plot(model1.1, mod = "1", group = "species", data = data, xlab = "SMDH") + 
       scale_colour_manual(values = "grey") + 
       scale_fill_manual(values = "red") +
-      labs(y = "Overall Meta-analytic Mean") +
       scale_y_discrete(labels = "")
 
-p1 + p2 + plot_annotation(tag_levels = c('A', 'B'))
-
+p3 <- p1 + p2 + plot_annotation(tag_levels = c('A', 'B'))
+p3
+ggsave(plot = p3, filename = "fig1.png", width = 12, height= 5, path = "./output/figs", units = "in", device="png", dpi = 600)
 ```
 
-```{r pretty_table}
+```{r pretty_table, tab.cap = "Number of effect sizes, studies and species along with overall meta-analytic mean (average SMDH) and 95% confidence (CI) and prediction intervals (PI). Heterogeneity estimates and 95% CI's are also provided for study, trait, species and total heterogeneity (excluding sampling variance)"}
 
 autonum <- officer::run_autonum(seq_id = "tab", pre_label = "Table 1", bkm_all = TRUE)
 ft <- flextable::flextable(table1)
-ft <- flextable::set_caption(ft,  caption = "Effect size", autonum = autonum)
 ft %>%
   flextable::compose(part = "header", j = "n", value = as_paragraph("n", as_sub("effects"))) %>%
   flextable::compose(part = "header", j = "std", value = as_paragraph("n", as_sub("studies"))) %>%
@@ -297,7 +299,6 @@ ft %>%
   flextable::compose(part = "header", j = "i2_species", value = as_paragraph("I", as_sup("2"), as_sub("species"))) %>%
   flextable::compose(part = "header", j = "i2_tot", value = as_paragraph("I", as_sup("2"), as_sub("total")))
   
-
 ```
 
 #### Negative effects on fitness depend on the type of harm done to females
