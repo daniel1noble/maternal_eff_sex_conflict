@@ -66,3 +66,12 @@ p_value <- function(x){
   if(x >= 0.01) {tmp = round(x, digits =2)}
   return(tmp)
 }
+
+
+plot.cook <- function(cooksD, model, vals, data){
+  plot(cooksD, xlab = "Effect", ylab = "Cook's Distance")
+  abline(h = 4/model$k.all, col = "red", lty = 4)
+  text(data[as.vector(which(cooksD > 4/model$k.all)), vals], 
+       x = c(1:model$k.all)[which(cooksD > 4/model$k.all)]+5, 
+       y = cooksD[as.vector(which(cooksD > 4/model$k.all))])
+}
