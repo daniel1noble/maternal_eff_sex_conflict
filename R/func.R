@@ -68,10 +68,24 @@ p_value <- function(x){
 }
 
 
-plot.cook <- function(cooksD, model, vals, data){
+plot.cook <- function(cooksD, model, vals, type = c("plot", "vals")){
+  type <- match.arg(type)
+  data <- model$data
+  
+  # check data size and Cooks D size match
+  if(dim(data)[1] != length(cooksD)){
+    stop("Rows in data do not match length of Cook's D vector")
+  }
+  
+  if(type == "plot"){
   plot(cooksD, xlab = "Effect", ylab = "Cook's Distance")
   abline(h = 4/model$k.all, col = "red", lty = 4)
-  text(data[as.vector(which(cooksD > 4/model$k.all)), vals], 
+  text(data[which(cooksD > 4/model$k.all), vals], 
        x = c(1:model$k.all)[which(cooksD > 4/model$k.all)]+5, 
        y = cooksD[as.vector(which(cooksD > 4/model$k.all))])
+  }
+  
+  if(type == "vals"){
+    return(data[as.vector(which(cooksD > 4/model$k.all)), vals])
+  }
 }
