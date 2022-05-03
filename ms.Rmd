@@ -66,11 +66,11 @@ eval(metafor:::.MuMIn)
 ###################
   
   model1.1 <- rma.mv(SMDH ~ 1, V = data$v_SMDH, 
-                     random = list(~1|study, ~1|variable, ~1|species, ~1|obs), test = "t", data = data)
+                     random = list(~1|study, ~1|variable, ~1|species, ~1|obs),  dfs = "contain", test = "t", data = data)
     robust <- robust(model1.1, cluster = data$study, vcov = "CR2")
   
   model1.2 <- rma.mv(SMDH ~ 1, V = data$v_SMDH, 
-                     random = list(~1|study, ~1|variable, ~1|species, ~1|species2, ~1|obs), R = list(species2 = phylogeny), test = "t", data = data)
+                     random = list(~1|study, ~1|variable, ~1|species, ~1|species2, ~1|obs), R = list(species2 = phylogeny),  dfs = "contain", test = "t", data = data)
   
    aics <- AICc(model1.2, model1.1) # Phylogeny explains very little variation; model without phylogeny better supported, even if slightly. Just keep species in model
   dAICc <- max(aics$AICc) - min(aics$AICc)
@@ -87,9 +87,15 @@ eval(metafor:::.MuMIn)
            hist(residuals(model1.1))
         
            cd.model1.1 <- cooks.distance(model1.1)
-           plot(cd.model1.1, xlab = "Effect", ylab = "Cook's Distance")
-           abline(h = 4/model1.1$k.all, col = "red", lty = 4)
-        }
+           plot.cook(cd.model1.1, model1.1, vals = "obs")
+           
+           vals <- plot.cook(cd.model1.1, model1.1, vals = "obs", type = "vals")
+           
+           # results highly robust to outliers removed. Effect size strength increases
+           model1.1_refit <- rma.mv(SMDH ~ 1, V = data$v_SMDH, 
+                     random = list(~1|study, ~1|variable, ~1|species, ~1|obs), test = "t", data = data[!data$obs %in% vals,])
+         }
+         
 ###################
 # Publication bias. Based on funnel plot, it looks like pub bias. Correct effect as a sensitivity analysis
 ###################
@@ -97,13 +103,13 @@ eval(metafor:::.MuMIn)
      data$inv_n_eff <- with(data, (N_C + N_T) / (N_C * N_T))
   
        model1.1_pub <- rma.mv(SMDH ~ sqrt(inv_n_eff), V = data$v_SMDH, 
-                              random = list(~1|study, ~1|variable, ~1|species, ~1|obs), test = "t", data = data)
+                              random = list(~1|study, ~1|variable, ~1|species, ~1|obs),  dfs = "contain", test = "t", data = data)
   
   model1.1_pub_full <- rma.mv(SMDH ~ sqrt(inv_n_eff) + SSD_lnRR + Harm_type, V = data$v_SMDH, 
-                              random = list(~1|study, ~1|variable, ~1|species, ~1|obs), test = "t", data = data)
+                              random = list(~1|study, ~1|variable, ~1|species, ~1|obs), dfs = "contain", test = "t", data = data)
    model1.1_pub_full_het <- rma.mv(SMDH ~ sqrt(inv_n_eff) + SSD_lnRR + Harm_type, V = data$v_SMDH, 
                               random = list(~1|study, ~1|variable, ~1|species, ~Harm_type|obs), rho = 0, 
-                              str = "HCS", test = "t", data = data)
+                              str = "HCS",  dfs = "contain", test = "t", data = data)
       AICc(model1.1_pub_full, model1.1_pub_full_het) # Basically the same results so simplify model.
 
 ###################
@@ -114,12 +120,12 @@ eval(metafor:::.MuMIn)
   ################
   # Marginalised model. Just easier to get slope
   model1.3 <- rma.mv(SMDH ~ zSSD, V = data$v_SMDH, 
-                     random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data)
-  robust_model1.3 <- robust(model1.3, cluster = data$study)
+                     random = list(~1|study, ~1|species, ~1|obs),  dfs = "contain", test = "t", data = data[complete.cases(data$zSSD),])
+  robust_model1.3 <- robust(model1.3, cluster = data[complete.cases(data$zSSD),"study"])
   
   # Use raw SSD for plotting, so we can plot raw data, which is easier to interpret
   model1.3_nonZ <- rma.mv(SMDH ~ SSD_lnRR, V = data$v_SMDH, 
-                     random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data)
+                     random = list(~1|study, ~1|species, ~1|obs),  dfs = "contain", test = "t", data = data)
   robust_model1.3_nonZ <- robust(model1.3_nonZ, cluster = data$study)
   
         r2_SSD = r2_ml(model1.3)
@@ -129,27 +135,45 @@ eval(metafor:::.MuMIn)
            hist(residuals(model1.3))
         
            cd.model1.3 <- cooks.distance(model1.3)
-           plot.cook(cd.model1.3, model1.3, "obs", data = data)
-        }
+           plot.cook(cd.model1.3, model1.3, vals = "obs")
+           vals <- plot.cook(cd.model1.3, model1.3, vals = "obs", type = "vals")
+           
+           # Removing outliers decrease zSSD effect by 0.10, but still non-significant/
+           model1.3_refit <- rma.mv(SMDH ~ zSSD, V = data$v_SMDH, 
+                     random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data[!data$obs %in% vals,])
+    }
+        
   ###############
       # Harm type
   ################
   # Marginalised Harm type        
   model1.4 <- rma.mv(SMDH ~ Harm_type, V = data$v_SMDH, 
-                     random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data)
-  robust(model1.4, cluster = data$study)
+                     random = list(~1|study, ~1|species, ~1|obs),  dfs = "contain", test = "t", data = data[complete.cases(data$Harm_type),])
+  robust(model1.4, cluster = data[complete.cases(data$Harm_type),"study"])
 
   male_harm_r2 = r2_ml(model1.4)
   
+  # Just some model checks.
+    if(checks){
+           hist(residuals(model1.4))
+        
+           cd.model1.4 <- cooks.distance(model1.4)
+           plot.cook(cd.model1.4, model1.4, "obs")
+           vals <- plot.cook(cd.model1.4, model1.4, "obs", type = "vals")
+          
+         model1.4_refit <- rma.mv(SMDH ~ Harm_type, V = data$v_SMDH, 
+                     random = list(~1|study, ~1|species, ~1|obs),  dfs = "contain", test = "t", data = data[!data$obs %in% vals,])    
+           
+        }
   ###############
       # Harm type & SSD
   ################
   # Model that contains harm type and SSD. Harm type appears to have different variances, so I'll check whether it is safe to assume homogeneity of variance across groups
   model1.5 <- rma.mv(SMDH ~  Harm_type + zSSD, V = data$v_SMDH, 
-                     random = list(~1|study, ~1|obs, ~1|species), test = "t", 
-                     method = "ML", data = data)
+                     random = list(~1|study, ~1|obs, ~1|species),  dfs = "contain", test = "t", 
+                     method = "ML", data = data[complete.cases(data$Harm_type, data$zSSD),])
   model1.5_inter <- rma.mv(SMDH ~  Harm_type + zSSD + Harm_type:zSSD, V = data$v_SMDH, 
-                     random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                     random = list(~1|study, ~1|obs, ~1|species),  dfs = "contain", test = "t", 
                      method = "ML", data = data)
   
   # Does SSD effect vary by harm type. No evidence for interaction
@@ -161,19 +185,34 @@ eval(metafor:::.MuMIn)
   
   # Non Z transform
   model1.5_nonZ <- rma.mv(SMDH ~ Harm_type + SSD_lnRR, V = data$v_SMDH, 
-                     random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data)
+                     random = list(~1|study, ~1|species, ~1|obs), dfs = "contain", test = "t", data = data)
   robust_model1.5_nonZ <- robust(model1.5_nonZ, cluster = data$study)
   
   model1.6 <- rma.mv(SMDH ~ Harm_type + zSSD, V = data$v_SMDH, 
                      random = list(~1|study, ~(1 + Harm_type)|obs, ~1|species), 
-                     rho = 0, struc = "HCS", test = "t", data = data)
+                     rho = 0, struc = "HCS",  dfs = "contain", test = "t", data = data)
   
   # Compare AICc for each model
     aicc_het <- AICc(model1.5, model1.6)
   d_aicc_het <- max(aicc_het$AICc) - min(aicc_het$AICc) # Delta suggests homogeneity model better
   
   # Check robustness of results using sandwich estimator
-  robust_model1.5 <- robust(model1.5, cluster = data$study, vcov = "CR2")
+  robust_model1.5 <- robust(model1.5, cluster = data[complete.cases(data$Harm_type, data$zSSD),"study"], vcov = "CR2")
+  
+  # Just some model checks.
+   if(checks){
+           hist(residuals(model1.5))
+        
+           cd.model1.5 <- cooks.distance(robust_model1.5)
+           plot.cook(cd.model1.5, robust_model1.5, "obs")
+           vals <- plot.cook(cd.model1.5, robust_model1.5, "obs", type = "vals")
+          
+         model1.5_refit <- rma.mv(SMDH ~ Harm_type + zSSD, V = data$v_SMDH, 
+                     random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data[!data$obs %in% vals,])    
+         # But very clear outlier is 136 so remove this first
+         model1.5_refit <- rma.mv(SMDH ~ Harm_type + zSSD, V = data$v_SMDH, 
+                     random = list(~1|study, ~1|species, ~1|obs), test = "t", data = data[!data$obs %in% 136,])    
+   }
   
   # Now reparameterize model
   model1.5_2 <- rma.mv(SMDH ~ 0 + Harm_type + zSSD, V = data$v_SMDH, 
@@ -196,11 +235,11 @@ eval(metafor:::.MuMIn)
   sperm_data <- data %>% filter(!SCR.SCI == "hermaphrodite" & !is.na(zSSD))
 
   model1.7_inetr <- rma.mv(SMDH ~  SCR.SCI*zSSD, V = sperm_data$v_SMDH, 
-                     random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                     random = list(~1|study, ~1|obs, ~1|species), dfs = "contain", test = "t", 
                      method = "ML", data = sperm_data)
     
   model1.7 <- rma.mv(SMDH ~  SCR.SCI + zSSD, V = sperm_data$v_SMDH, 
-                     random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                     random = list(~1|study, ~1|obs, ~1|species), dfs = "contain", test = "t", 
                      method = "ML", data = sperm_data)
   
   # Check for interaction
@@ -221,6 +260,19 @@ eval(metafor:::.MuMIn)
   aicc_1.7_het <- AICc(model1.7_het, model1.7)
    d_aicc_1.7_het <- max(aicc_1.7_het$AICc) - min(aicc_1.7_het$AICc)
    
+  # Just some model checks.
+    if(checks){
+           hist(residuals(model1.7))
+        
+           cd.model1.7 <- cooks.distance(model1.7)
+           plot.cook(cd.model1.7, model1.7, "obs")
+           obs <- plot.cook(cd.model1.7, model1.7, "obs",type = "vals")
+
+      # Results are pretty similar without these rows with high Cooks D
+      model1.7_refit <- rma.mv(SMDH ~  SCR.SCI + zSSD, V = sperm_data$v_SMDH, 
+                     random = list(~1|study, ~1|obs, ~1|species), dfs = "contain", test = "t", 
+                     method = "ML", data = sperm_data[!sperm_data$obs %in% obs,])
+        }
    
   model1.7_reparam <- rma.mv(SMDH ~ 0 +  SCR.SCI + zSSD, V = sperm_data$v_SMDH, 
                      random = list(~1|study, ~1|obs, ~1|species), test = "t", 
@@ -232,23 +284,23 @@ eval(metafor:::.MuMIn)
   ################
   # Sex differences in lifespan
     model1.8 <- rma.mv(SMDH ~ sex_life, V = data$v_SMDH, 
-                       random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                       random = list(~1|study, ~1|obs, ~1|species), dfs = "contain", test = "t", 
                        method = "REML", data = data)
     robust_model1.8 <- robust(model1.8, cluster = data$study, vcov = "CR2")
     
     model1.9 <- rma.mv(SMDH ~ sex_life + zSSD + Harm_type, V = data$v_SMDH, 
-                       random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                       random = list(~1|study, ~1|obs, ~1|species), dfs = "contain", test = "t", 
                        method = "REML", data = data)
-    robust_model1.9 <- robust(model1.8, cluster = data$study, vcov = "CR2")
+    robust_model1.9 <- robust(model1.9, cluster = data$study, vcov = "CR2")
     
   # Female lifespan
     model1.10 <- rma.mv(SMDH ~ scale(F_LRS), V = data$v_SMDH, 
-                       random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+                       random = list(~1|study, ~1|obs, ~1|species), dfs = "contain", test = "t", 
                        method = "REML", data = data)
-    robust_model1.10 <- robust(model1.9, cluster = data$study, vcov = "CR2")
+    robust_model1.10 <- robust(model1.10, cluster = data$study, vcov = "CR2")
     
-    model1.11 <- rma.mv(SMDH ~ scale(F_LRS) + Harm_type, V = data$v_SMDH, 
-                       random = list(~1|study, ~1|obs, ~1|species), test = "t", 
+    model1.11 <- rma.mv(SMDH ~ scale(F_LRS) + Harm_type + zSSD, V = data$v_SMDH, 
+                       random = list(~1|study, ~1|obs, ~1|species), dfs = "contain", test = "t", 
                        method = "REML", data = data)
     robust_model1.11 <- robust(model1.11, cluster = data$study, vcov = "CR2")
     
@@ -293,7 +345,7 @@ Across all species, we obtained `r table(data$Gestation)[1]` effects from `r par
 
 #### Manipulating direct and indirect female harm negatively impacts female fitness
 
-Experimentally manipulating female harm resulted in a strong decrease in female fitness overall (i.e., positive effect size with control group females having higher fitness than treatment groups: `r model1.1$beta`, 95% CI: `r model1.1$ci.lb` to `r model1.1$ci.ub`, $n_{effects}$ = `r model1.1$k.all`, $n_{study}$ = `r model1.1$s.nlevels[1]`). This strong effect held even when accounting for within-study non-independence (Meta-analytic mean using Robust Variance Estimator: `r robust$beta`, 95% CI: `r robust$ci.lb` to `r robust$ci.ub`). Visual inspection of funnel plot asymmetry suggested evidence for publication bias (i.e., missed effects sizes with low precision when female harm was worse in control treatments) (Figure \@ref(fig:funnel)), which was confirmed through the identification of a significant slope between effect size and effective sample size ($\beta$ = `r model1.1_pub$beta[2]`, 95% CI: `r model1.1_pub$ci.lb[2]` to `r model1.1_pub$ci.ub[2]`). This result held true when accounting for heterogeneity using meta-regression models ($\beta$ =`r model1.1_pub_full$beta[2]`, 95% CI: `r model1.1_pub_full$ci.lb[2]` to `r model1.1_pub_full$ci.ub[2]`). Correcting for the possibility of missing studies resulted in the overall meta-analytic mean effect size being indistinguishable from zero (Corrected meta-analytic mean: `r model1.1_pub$beta[1]`, 95% CI: `r model1.1_pub$ci.lb[1]` to `r model1.1_pub$ci.ub[1]`). These findings suggest that additional empirical studies may change the overall magnitude of effects, possibly showing weaker effects then what is currently published, however, it is important to recognise that we cannot know for sure what (if anything) is generating such a bias.
+Experimentally manipulating female harm resulted in a strong decrease in female fitness overall (i.e., positive effect size with control group females having higher fitness than treatment groups: `r model1.1$beta`, 95% CI: `r model1.1$ci.lb` to `r model1.1$ci.ub`, $n_{effects}$ = `r model1.1$k.all`, $n_{study}$ = `r model1.1$s.nlevels[1]`). This effect held even when accounting for within-study non-independence (meta-analytic mean using Robust Variance Estimator: `r robust$beta`, 95% CI: `r robust$ci.lb` to `r robust$ci.ub`). Visual inspection of funnel plot asymmetry suggested evidence for publication bias (i.e., missed effects sizes with low precision when female harm was worse in control treatments) (Figure \@ref(fig:funnel)), which was confirmed through the identification of a significant slope between effect size and effective sample size ($\beta$ = `r model1.1_pub$beta[2]`, 95% CI: `r model1.1_pub$ci.lb[2]` to `r model1.1_pub$ci.ub[2]`). This result held true when accounting for heterogeneity using meta-regression models ($\beta$ =`r model1.1_pub_full$beta[2]`, 95% CI: `r model1.1_pub_full$ci.lb[2]` to `r model1.1_pub_full$ci.ub[2]`). Correcting for the possibility of missing studies resulted in the overall meta-analytic mean effect size being indistinguishable from zero (Corrected meta-analytic mean: `r model1.1_pub$beta[1]`, 95% CI: `r model1.1_pub$ci.lb[1]` to `r model1.1_pub$ci.ub[1]`). These findings suggest that additional empirical studies may change the overall magnitude of effects, possibly showing weaker effects then what is currently published, but our current state of knowledge suggests that female fitness is indeed compromised overall by male harm.
 
 When accounting for sampling variance there was high effect size heterogeneity ($I^2_{Total}$ = `r hetero_table$I2_Est.[nrow(hetero_table)]`, 95% CI: `r hetero_table[nrow(hetero_table), "2.5% CI"]` to `r hetero_table[nrow(hetero_table), "97.5% CI"]`) with most variance being the result of between study ($I^2_{Study}$ = `r hetero_table$I2_Est.[1]`, 95% CI: `r hetero_table[1, "2.5% CI"]` to `r hetero_table[1, "97.5% CI"]`) and between species ($I^2_{Species}$ = `r hetero_table$I2_Est.[3]`, 95% CI: `r hetero_table[3, "2.5% CI"]` to `r hetero_table[3, "97.5% CI"]`) effects. The trait type and phylogeny explained much less variation overall ($I^2_{Trait}$ = `r hetero_table$I2_Est.[2]`, 95% CI: `r hetero_table[2, "2.5% CI"]` to `r hetero_table[2, "97.5% CI"]`; $I^2_{Phylogeny}$ = `r hetero_table_phylo$I2_Est.[5]`, 95% CI: `r hetero_table_phylo[5, "2.5% CI"]` to `r hetero_table_phylo[5, "97.5% CI"]`) (Table \@ref(tab:table1)). 
 
@@ -338,11 +390,13 @@ ft %>%
   
 ```
 
-#### Negative effects on fitness depend on the type of harm done to females
+#### Negative effects on fitness and the type of harm done to females
 
-Male harm type impacted the overall magnitude of effects explaining `r male_harm_r2[1]*100`% of effect size variance (Figure \@ref(fig:maleharm)). Species where mating results in both direct and indirect harm to females have males that significantly impact female fitness (overall meta-analytic mean: `r robust_model1.5_2$beta[1]`, 95% CI: `r robust_model1.5_2$ci.lb[1]` to `r robust_model1.5_2$ci.ub[1]`,  p = `r p_value(robust_model1.5_2$pval[1])`). Surprisingly, however, species with direct female harm only (i.e., traumatic insemination), showed a small and opposite effect on female fitness (overall meta-analytic mean: `r robust_model1.5_2$beta[2]`, 95% CI: `r robust_model1.5_2$ci.lb[2]` to `r robust_model1.5_2$ci.ub[2]`; Figure \@ref(fig:maleharm)), however, this effect did not differ significantly from zero (p = `r p_value(robust_model1.5_2$pval[2])`). While indirect male harm also resulted in a smaller overall meta-analytic mean relative to species with both, it was still significantly positive (overall meta-analytic mean: `r robust_model1.5_2$beta[3]`, 95% CI: `r robust_model1.5_2$ci.lb[3]` to `r robust_model1.5_2$ci.ub[3]`,  p = `r p_value(robust_model1.5_2$pval[3])`), and only marginally different than species with both direct and indirect male harm (Figure \@ref(fig:maleharm)).
+Male harm type appeared to impact the overall magnitude of effects explaining `r male_harm_r2[1]*100`% of effect size variance (Figure \@ref(fig:maleharm)). Species where mating results in both direct and indirect harm to females have males that significantly impact female fitness (overall meta-analytic mean: `r robust_model1.5_2$beta[1]`, 95% CI: `r robust_model1.5_2$ci.lb[1]` to `r robust_model1.5_2$ci.ub[1]`,  p = `r p_value(robust_model1.5_2$pval[1])`). Surprisingly, however, species with direct female harm only (i.e., traumatic insemination), showed a small and opposite effect on female fitness (overall meta-analytic mean: `r robust_model1.5_2$beta[2]`, 95% CI: `r robust_model1.5_2$ci.lb[2]` to `r robust_model1.5_2$ci.ub[2]`; Figure \@ref(fig:maleharm)), however, this effect did not differ significantly from zero (p = `r p_value(robust_model1.5_2$pval[2])`). While indirect male harm also resulted in a smaller overall meta-analytic mean relative to species with both, it was still significantly positive (overall meta-analytic mean: `r robust_model1.5_2$beta[3]`, 95% CI: `r robust_model1.5_2$ci.lb[3]` to `r robust_model1.5_2$ci.ub[3]`,  p = `r p_value(robust_model1.5_2$pval[3])`), and only marginally different than species with both direct and indirect male harm (Figure \@ref(fig:maleharm)). Regardless, differences among species exhibiting different types of female harm seemed to be driven primarily by
+a single study (Taylor, 2008) on *Drosophila melanogaster* (very high Cook's distance). Removing this effect resulted in no significant difference between harm type categories. 
 
-```{r maleharm, fig.width=11.56944, fig.height=7.62500, fig.cap="Distribution of effect sizes, overall meta-analytic mean estimates and 95% confidence intervals (CIs) across species with different types of male harm towards females. Total effect sizes (n) and total number of studies (k) are provided for each level of Male Harm Type. Relevant contrasts between meta-analytic means are provided, along with 95% CIs and significance of contrast."}
+
+```{r maleharm, fig.width=11.56944, fig.height=7.62500, fig.cap="Distribution of effect sizes, overall meta-analytic mean estimates and 95% confidence intervals (CIs) across species with different types of male harm towards females. Total effect sizes (n) and total number of studies (k) are provided for each level of Male Harm Type. Relevant contrasts between meta-analytic means are provided, along with 95% CIs and significance of contrast. Note that this includes all data. Removing outlier point from single study results in no different between harm type categories. "}
 
 # model results
 rownames(robust_model1.5_2_PI) <- 1:dim(robust_model1.5_2_PI)[1]
@@ -466,5 +520,9 @@ ggsave(plot = sperm_plot, filename = "fig4.png", path = "./output/figs", height 
 sperm_plot
 
 ```
+
+
+#### Species lifespan does not explain patterns in female harm
+Female lifespan or the difference in lifespan between males and females of a species did not explain significant variation in female harm in treatments after controlling for sexual size dimorphism and harm type ($\beta_{lifespan_{f}}$ = `r robust_model1.9$b[2]`, 95% CI: `r robust_model1.9$ci.lb[2]` to `r robust_model1.9$ci.ub[2]`, t = `r robust_model1.9$zval[2]`, df = `r robust_model1.9$dfs`, p = `r robust_model1.9$pval[2]`; $\beta_{lifespan_{\Delta_{m-f}}}$ = `r robust_model1.11$b[2]`, 95% CI: `r robust_model1.11$ci.lb[2]` to `r robust_model1.11$ci.ub[2]`, t = `r robust_model1.11$zval[2]`, df = `r robust_model1.11$dfs`, p = `r robust_model1.11$pval[2]`)
 
 # References
