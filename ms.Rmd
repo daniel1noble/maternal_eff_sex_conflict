@@ -29,7 +29,10 @@
 ```
 
 ```{r loadpackages, echo = FALSE, results = "hide"}
-  pacman::p_load(tidyverse, metafor, brms, metaAidR, ape, phytools, metaAidR, orchaRd, gt, kableExtra, flextable, patchwork, latex2exp, MuMIn, equatiomatic, magrittr, data.table)
+devtools::install_github("daniel1noble/orchaRd", force = TRUE)
+devtools::install_github("daniel1noble/metaAidR", force = TRUE)
+
+  pacman::p_load(tidyverse, metafor, brms, orchaRd, ape, phytools, metaAidR, orchaRd, gt, kableExtra, flextable, patchwork, latex2exp, MuMIn, equatiomatic, magrittr, data.table)
 eval(metafor:::.MuMIn)
 ```
 
@@ -110,7 +113,7 @@ eval(metafor:::.MuMIn)
    model1.1_pub_full_het <- rma.mv(SMDH ~ sqrt(inv_n_eff) + SSD_lnRR + Harm_type, V = data$v_SMDH, 
                               random = list(~1|study, ~1|variable, ~1|species, ~Harm_type|obs), rho = 0, 
                               str = "HCS",  dfs = "contain", test = "t", data = data)
-      AICc(model1.1_pub_full, model1.1_pub_full_het) # Basically the same results so simplify model.
+      AICc(model1.1_pub_full, model1.1_pub_full_het) # Checked that k = 120 for both models, using same dataset. Basically the same results so simplify model.
 
 ###################
 # Meta-regressions
