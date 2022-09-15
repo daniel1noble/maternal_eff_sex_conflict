@@ -48,6 +48,8 @@ pacman::p_load(tidyverse, metafor, brms, latex2exp)
 
 # Generate Effect Sizes - Going to use SMDH (Hedges g with heteroscedasticity correction)
 data <- escalc(m1i = X_C, sd1i =sd_C, n1i = N_C, m2i= X_T, sd2i= sd_T, n2i= N_T, data = data, append = TRUE, measure = "SMDH", var.names=c("SMDH","v_SMDH"))
+data <- escalc(m1i = X_C, sd1i =sd_C, n1i = N_C, m2i= X_T, sd2i= sd_T, n2i= N_T, data = data, append = TRUE, measure = "CVR", var.names=c("logCVR","v_logCVR"))
+data <- escalc(m1i = X_C, sd1i =sd_C, n1i = N_C, m2i= X_T, sd2i= sd_T, n2i= N_T, data = data, append = TRUE, measure = "VR", var.names=c("logVR","v_logVR"))
 
 # Clean data up a bit. We don't need all columns
 data <- data %>% 
