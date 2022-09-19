@@ -26,8 +26,8 @@ pacman::p_load(tidyverse, metafor, brms, latex2exp)
 
 # Explore a bit more of how much data we have across various moderators
 	data %>% 
-	select_if(is.factor) %>% 
-	select(-c(notes, Dependency_decisions, journal, pg, author, estimated.increase.in.harm, Err_C_Type, Err_T_Type, C_flipped, source)) %>% 
+	select_if(is.character) %>% 
+	dplyr::select(-c(Dependency_decisions, journal, pg, author, estimated.increase.in.harm, Err_C_Type, Err_T_Type, C_flipped, source)) %>% 
 	glimpse %>% summary(.)
 
 # From this it is quite clear that there is not too much use in Parental Care as most don't have care. Most of the data is a direct measure of fitness, which is good. Most data are from oviparous, but sensible split possibly. We can actually reclassify ovoviviparous to oviparous
@@ -110,3 +110,4 @@ ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDH), colour = species
 ## How that we've had an explore of the data, cleaned up the messiness and checked effect size data we are ready to analyse. Will export final data
 
 	write.csv(data, "./data/meta_data.csv", row.names=FALSE)
+	
