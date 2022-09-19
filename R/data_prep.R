@@ -53,7 +53,7 @@ data <- escalc(m1i = X_C, sd1i =sd_C, n1i = N_C, m2i= X_T, sd2i= sd_T, n2i= N_T,
 
 # Clean data up a bit. We don't need all columns
 data <- data %>% 
-select(obs, study, author, year, class, order, family, genus, species, variable, fitness.estimate, treatment, estimated.increase.in.harm, X_C, sd_C, N_C, X_T, sd_T, N_T, SMDH, v_SMDH, SME_index, Male.measure, Female.measure, SCR.SCI, Sperm.compet, Harm_type, Parental.care , Gestation, depend, shared.control, source)
+select(obs, study, author, year, class, order, family, genus, species, variable, fitness.estimate, treatment, estimated.increase.in.harm, X_C, sd_C, N_C, X_T, sd_T, N_T, SMDH, v_SMDH, SME_index, Male.measure, Female.measure, SCR.SCI, Sperm.compet, Harm_type, Parental.care , Gestation, depend, shared.control, source, M_lifespan, F_lifespan)
 
 # Have a look. Does look like clear evidence for publication bias. 
 ggplot(data, aes(x = SMDH, y = 1 / sqrt(v_SMDH), xmin = -6, xmax = 6)) +
