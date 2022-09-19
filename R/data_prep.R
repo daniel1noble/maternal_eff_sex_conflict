@@ -7,6 +7,7 @@
 pacman::p_load(tidyverse, metafor, brms, latex2exp)
 
 # Load data written from phylogeny script. 
+  source("./R/phylogeny.R")
 	data <- read.csv("./data/meta_data.csv")
 	str(data)
 
