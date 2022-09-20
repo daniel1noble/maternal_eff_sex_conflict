@@ -44,7 +44,7 @@ eval(metafor:::.MuMIn)
       data <- read.csv("./data/meta_data.csv")
       data <- data %>% 
               mutate(species2 = species, 
-                     zSSD = scale(SSD_lnRR),
+                         zSSD = scale(SSD_lnRR),
                      sex_life = log(M_lifespan / F_lifespan))
   
   # Bring in and prune tree
@@ -530,5 +530,39 @@ Female lifespan or the difference in lifespan between males and females of a spe
 
 
 #### Variation in female fitness
+
+```{r, variation}
+
+  ###############
+      # Variance in female fitness in harm and control treatment. Use lnCVR and lnVR (Nakagawa et al. 2015). On request of reviewer
+  ################
+  
+    ## Overall intercept only models. Note that, for lnCVR, 3 effect sizes are based on non-ratio data so are not defined and are excluded.
+    model1_lnCVR <- rma.mv(logCVR ~ 1, V = v_logCVR, 
+                       random = list(~1|study, ~1|obs, ~1|species), dfs = "contain", test = "t", 
+                       method = "REML", data = data)
+    robust_model1_lnCVR <- robust(model1_lnCVR, cluster = data$study, vcov = "CR2")
+    
+    model1_lnVR <- rma.mv(logVR ~ 1, V = v_logVR, 
+                       random = list(~1|study, ~1|obs, ~1|species), dfs = "contain", test = "t", 
+                       method = "REML", data = data)
+    robust_model1_lnVR <- robust(model1_lnVR, cluster = data$study, vcov = "CR2")
+    
+  
+    orchard_plot(model1_lnCVR, group = "study", data = data, 
+                 xlab = "log Coefficient of Variation (lnCVR)") + 
+    labs(x = "Overall Mean Estimate")
+  ###############
+      # Final tables
+  ################
+  # Tables
+                n1.7 <- sperm_data %>% group_by(SCR.SCI) %>% summarise(n = n(), nstdy = length(unique(study)), moderator = unique(SCR.SCI))
+      n1.7[3,c(2,3)] <- t(c(dim(data)[1], with(data, length(unique(study)))))
+  robust_model1.7_PI <- pred_interval(robust_model1.7_reparam, c(4.404, 1.88, 2.49)) # Ignore PIs not used and not correct
+  robust_model1.7_PI <- cbind(robust_model1.7_PI, n1.7)
+  
+
+```
+
 
 # References
