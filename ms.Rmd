@@ -528,4 +528,7 @@ sperm_plot
 #### Species lifespan does not explain patterns in female harm
 Female lifespan or the difference in lifespan between males and females of a species did not explain significant variation in female harm in treatments after controlling for sexual size dimorphism and harm type ($\beta_{lifespan_{f}}$ = `r robust_model1.9$b[2]`, 95% CI: `r robust_model1.9$ci.lb[2]` to `r robust_model1.9$ci.ub[2]`, t = `r robust_model1.9$zval[2]`, df = `r robust_model1.9$dfs`, p = `r robust_model1.9$pval[2]`; $\beta_{lifespan_{\Delta_{m-f}}}$ = `r robust_model1.11$b[2]`, 95% CI: `r robust_model1.11$ci.lb[2]` to `r robust_model1.11$ci.ub[2]`, t = `r robust_model1.11$zval[2]`, df = `r robust_model1.11$dfs`, p = `r robust_model1.11$pval[2]`)
 
+
+#### Variation in female fitness
+
 # References
