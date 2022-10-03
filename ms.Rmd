@@ -543,6 +543,14 @@ Female lifespan or the difference in lifespan between males and females of a spe
       geom_abline() + 
       labs(x = "log Mean", y = "log SD") + theme_bw()
 
+## Geary's test to check normality assumptions
+data <- data %>% 
+         mutate(geary_control = geary(X_C, sd_C, N_C),
+                    geary_trt = geary(X_T, sd_T, N_T),
+                   geary_test = ifelse(geary_control >= 3 & geary_trt >= 3, "pass", "fail"))
+# How many fail?
+    geary_res <- data %>% group_by(geary_test) %>% summarise(n = n()) %>%  data.frame()
+
     ## Overall intercept only models. Note that, for lnCVR, 3 effect sizes are based on non-ratio data so are not defined and are excluded.
     model1_lnCVR <- rma.mv(logCVR ~ 1, V = v_logCVR, 
                        random = list(~1|study, ~1|obs, ~1|species), dfs = "contain", test = "t", 
