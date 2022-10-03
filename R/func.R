@@ -89,3 +89,9 @@ plot.cook <- function(cooksD, model, vals, type = c("plot", "vals")){
     return(data[as.vector(which(cooksD > 4/model$k.all)), vals])
   }
 }
+
+
+# Function to calculate Geary's "number"
+geary <- function(mean, sd, n){
+  (1 / (sd / mean)) * ((4*n)^(3/2) / (1 + 4*n))
+}
