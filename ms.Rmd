@@ -583,19 +583,44 @@ data <- data %>%
     
     # First, we need to reorganise the data in long format
     
-    data_long <- data %>% pivot_longer(cols = c(14:19), values_to = "value") %>% 
-                pivot_wider(names_from = grep(name, "sd"), values_from = value, ) %>% data.frame()
+    data_long <- data %>% filter(geary_test == "pass") %>%  
+                pivot_longer(cols = c(14:19), values_to = "value", names_to = "name") %>% 
+                data.frame()
     
-    data_long_mean <- data_long %>% filter(grepl("X_", name)) %>% mutate(obs = 1:n())
+    data_long_mean <- data_long %>% filter(grepl("X_", name))  %>% mutate(obs = 1:n())
       data_long_sd <- data_long %>% filter(grepl("sd_", name)) %>% mutate(obs = 1:n()) %>% select(obs, name, value)
-       data_long_n <- data_long %>% filter(grepl("N_", name)) %>% mutate(obs = 1:n()) %>% select(obs, name, value)
+       data_long_n <- data_long %>% filter(grepl("N_", name))  %>% mutate(obs = 1:n()) %>% select(obs, name, value)
        
     # Now, merge data sets together. 
       
        final_long1 <- left_join(data_long_mean, data_long_sd, by = "obs")
-        final_long <- left_join(final_long1, data_long_n, by = "obs")
-       
-       
+        final_long <- left_join(final_long1, data_long_n, by = "obs") %>% 
+                      rename("sd" = value.y,
+                             "mean" = value.x,
+                             "n"  = value,
+                             "trt" = name.x) %>% 
+                      mutate(trt = factor(trt))
+    
+    # Now that we have it in long format, we can calculate lnSD and lnX and their associated SE's
+        
+        final_long <- escalc(sdi = value.y, ni = value,  
+                             measure = "SDLN", data = final_long, 
+                             append = TRUE, var.names=c("lnSD","v_lnSD"))
+        
+         final_long <- escalc(mi = value.x, sdi = value.y, ni = value,  
+                              measure = "MNLN", data = final_long, 
+                              append = TRUE, var.names=c("lnX","v_lnX"))
+        
+        
+    # Fit a MLMA model with metafor
+        model1_lnSD <- rma.mv(lnSD ~ 1 + name.x + lnX, V = v_lnSD, 
+                       random = list(~1 + name.x|study, 
+                                     ~1|obs, 
+                                     ~1|species), 
+                       dfs = "contain", test = "t", 
+                       method = "REML", data = final_long)
+        
+      
    p1 <-  orchard_plot(model1_lnCVR, group = "study", data = data_cvr, 
                  xlab = "log Coefficient of Variation Ratio (lnCVR)") + 
           labs(x = "Overall Mean Estimate") +
