@@ -537,11 +537,19 @@ Female lifespan or the difference in lifespan between males and females of a spe
       # Variance in female fitness in harm and control treatment. Use lnCVR and lnVR (Nakagawa et al. 2015). On request of reviewer
   ################
    ## First, have a look at mean-variance relationships. Pretty strong relationship in both Treatment and Control group, as expected. 
-    ggplot(data, aes(x = log(X_T), y = log(sd_T))) + 
+p1_1 <-   ggplot(data, aes(x = log(X_T), y = log(sd_T))) + 
       geom_point(size = 2, col = "black") + 
       geom_point(aes(x = log(X_C), y = log(sd_C)), col = "grey", size = 2) + 
       geom_abline() + 
       labs(x = "log Mean", y = "log SD") + theme_bw()
+
+p2_2 <-ggplot(data, aes(x = X_T, y = sd_T)) + 
+      geom_point(size = 2, col = "black") + 
+      geom_point(aes(x = X_C, y = sd_C), col = "grey", size = 2) + 
+      geom_abline() + 
+      labs(x = "Mean", y = "SD") + theme_bw()
+
+(p1_1 | p2_2) + plot_annotation(tag_levels = "A", tag_suffix = ")")
 
 ## Geary's test to check normality assumptions
 data <- data %>% 
@@ -551,7 +559,7 @@ data <- data %>%
 # How many fail?
     geary_res <- data %>% group_by(geary_test) %>% summarise(n = n()) %>%  data.frame()
 
-# Exclude 4 studies that fail test. 3 effects are not defined in anycase
+# Exclude 4 studies that fail test. 3 effects are not defined in any case
     data_cvr <- data %>% filter(geary_test == "pass")
     
     ## Overall intercept only models. Note that, for lnCVR, 3 effect sizes are based on non-ratio data so are not defined and are excluded.
@@ -571,7 +579,23 @@ data <- data %>%
                        method = "REML", data = data_cvr)
     robust_model1_lnVR <- robust(model1_lnVR, cluster = data_cvr$study, vcov = "CR2")
     
-  
+  # We have a clear relationship bw SD and Mean, especially so on log scale, but raw scale not so much. We should check assumptions of lnCVR analysis
+    
+    # First, we need to reorganise the data in long format
+    
+    data_long <- data %>% pivot_longer(cols = c(14:19), values_to = "value") %>% 
+                pivot_wider(names_from = grep(name, "sd"), values_from = value, ) %>% data.frame()
+    
+    data_long_mean <- data_long %>% filter(grepl("X_", name)) %>% mutate(obs = 1:n())
+      data_long_sd <- data_long %>% filter(grepl("sd_", name)) %>% mutate(obs = 1:n()) %>% select(obs, name, value)
+       data_long_n <- data_long %>% filter(grepl("N_", name)) %>% mutate(obs = 1:n()) %>% select(obs, name, value)
+       
+    # Now, merge data sets together. 
+      
+       final_long1 <- left_join(data_long_mean, data_long_sd, by = "obs")
+        final_long <- left_join(final_long1, data_long_n, by = "obs")
+       
+       
    p1 <-  orchard_plot(model1_lnCVR, group = "study", data = data_cvr, 
                  xlab = "log Coefficient of Variation Ratio (lnCVR)") + 
           labs(x = "Overall Mean Estimate") +
@@ -588,11 +612,7 @@ data <- data %>%
   ###############
       # Final tables
   ################
-  # Tables
-                n1.7 <- sperm_data %>% group_by(SCR.SCI) %>% summarise(n = n(), nstdy = length(unique(study)), moderator = unique(SCR.SCI))
-      n1.7[3,c(2,3)] <- t(c(dim(data)[1], with(data, length(unique(study)))))
-  robust_model1.7_PI <- pred_interval(robust_model1.7_reparam, c(4.404, 1.88, 2.49)) # Ignore PIs not used and not correct
-  robust_model1.7_PI <- cbind(robust_model1.7_PI, n1.7)
+
   
 
 ```
