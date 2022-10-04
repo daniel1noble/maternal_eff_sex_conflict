@@ -551,21 +551,40 @@ data <- data %>%
 # How many fail?
     geary_res <- data %>% group_by(geary_test) %>% summarise(n = n()) %>%  data.frame()
 
+# Exclude 4 studies that fail test. 3 effects are not defined in anycase
+    data_cvr <- data %>% filter(geary_test == "pass")
+    
     ## Overall intercept only models. Note that, for lnCVR, 3 effect sizes are based on non-ratio data so are not defined and are excluded.
     model1_lnCVR <- rma.mv(logCVR ~ 1, V = v_logCVR, 
-                       random = list(~1|study, ~1|obs, ~1|species), dfs = "contain", test = "t", 
-                       method = "REML", data = data)
-    robust_model1_lnCVR <- robust(model1_lnCVR, cluster = data$study, vcov = "CR2")
+                       random = list(~1|study, 
+                                     ~1|obs, 
+                                     ~1|species), 
+                       dfs = "contain", test = "t", 
+                       method = "REML", data = data_cvr)
+    robust_model1_lnCVR <- robust(model1_lnCVR, cluster = data_cvr$study, vcov = "CR2")
     
     model1_lnVR <- rma.mv(logVR ~ 1, V = v_logVR, 
-                       random = list(~1|study, ~1|obs, ~1|species), dfs = "contain", test = "t", 
-                       method = "REML", data = data)
-    robust_model1_lnVR <- robust(model1_lnVR, cluster = data$study, vcov = "CR2")
+                       random = list(~1|study, 
+                                     ~1|obs, 
+                                     ~1|species), 
+                       dfs = "contain", test = "t", 
+                       method = "REML", data = data_cvr)
+    robust_model1_lnVR <- robust(model1_lnVR, cluster = data_cvr$study, vcov = "CR2")
     
   
-    orchard_plot(model1_lnCVR, group = "study", data = data, 
-                 xlab = "log Coefficient of Variation (lnCVR)") + 
-    labs(x = "Overall Mean Estimate")
+   p1 <-  orchard_plot(model1_lnCVR, group = "study", data = data_cvr, 
+                 xlab = "log Coefficient of Variation Ratio (lnCVR)") + 
+          labs(x = "Overall Mean Estimate") +
+          theme(axis.text.y = element_blank(),
+                legend.position = 'none')
+   p2 <-  orchard_plot(model1_lnVR, group = "study", data = data_cvr, 
+                 xlab = "log Variance Ratio (lnVR)") + 
+          labs(x = element_blank()) +
+          theme(axis.text.y = element_blank())
+   
+   (p1 | p2) + plot_annotation(tag_levels = "A", tag_suffix = ")")
+   
+   
   ###############
       # Final tables
   ################
