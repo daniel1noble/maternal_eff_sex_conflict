@@ -323,7 +323,7 @@ eval(metafor:::.MuMIn)
 #### Standardised Effect Size Measures
 We used the standardised mean difference with a small sample correction (i.e., Hedges' *g*) as our measure of effect size comparing female fitness measures across experimental treatments. To correct for the possibility that population variances in the two treatments differ, we made use of a corrected version of Hedges' *g* that controls for heteroscedastic population variances (hereafter called SMDH; [@Bonnet2008; @Bonnett2009]). Effect sizes were calculated by subtracting the treatment group mean from the control group mean and dividing by the pooled standard deviation. As such, positive effect sizes indicate that female 'fitness/traits' in control groups was higher than female 'fitness/traits' in treatment groups. 
 
-We also tested whether the variability in female fitness between the control and treatment group differed. To test this question, we used two effect size measures, the log Coefficient of Variation Ratio (lnCVR) that compared the coefficient of variation between control and treatment groups (contrast-based effect size), and the log standard deviation (lnSD), controlling for the log mean (lnX) using an arm-based approach [@nakagawa2015meta]. Both methods assume a mean-variance relationship, which was clearly evident in our data (see Supp Fig. SX). However, lnCVR assumes a linear relationship on the natural scale (SD-Mean), whereas lnSD fit using an arm-based approach assumes they are linear on the log scale, but relaxes assumptions about how the mean and variance scale.
+We also tested whether the variability in female fitness between the control and treatment group differed using the log Coefficient of Variation Ratio (lnCVR) that compared the coefficient of variation between control and treatment groups [@nakagawa2015meta]. Given lnCVR makes certain assumptions about mean-variance relationships which are not always upheld [see @nakagawa2015meta], we also ran an arm-based analysis using the log of the standard deviation (lnSD) in a multilevel meta-analytic model. See Supplement. Both results provided similar conclusions about the change in variability between control and treatment groups so we only present lnCVR. Again, the CV of the control group was subtracted from the CV of the treatment group such that positive effect sizes suggest greater variance in the control group and negative effect sizes greater variability in the treatment group (after controlling for the mean). 
 
 #### Meta-analysis
 We analysed effect size data using the *metafor* @Metafor (vers. `r utils::packageVersion("metafor")`) package in R @R (vers. `r paste0(R.Version()$major, ".", R.Version()$minor)`). To estimate the overall effect of male-harm on female fitness we first fit multi-level meta-analytic models (intercept only) @nakagawa2012methodological. We plotted overall meta-analytic means using the orchard plot package @NakaOrchard (vers. `r utils::packageVersion("orchard")`). Overall, we collected between `r n_eff_study[1]` to `r n_eff_study[2]` effect sizes per study. To control for sources of non-independence, we included study and species-level random effects @Noble2017. We also fit a model that included a species-level random effect with a phylogenetic correlation matrix derived using the Open Tree of Life Database @rotl (vers. `r utils::packageVersion("rotl")`). We used Grafen's method @Grafen to calculate branch lengths using the R package *ape* @ape (vers. `r utils::packageVersion("ape")`). Overall, a model containing only a species-level random effect variance was better supported than a model that estimated a phylogenetic variance ($\Delta_{AIC_{c}}$ = `r dAICc`). As such, we did not include phylogeny in our models. 
@@ -539,19 +539,6 @@ Female lifespan or the difference in lifespan between males and females of a spe
       # Variance in female fitness in harm and control treatment. Use lnCVR and lnVR (Nakagawa et al. 2015). On request of reviewer
   ################
    ## First, have a look at mean-variance relationships. Pretty strong relationship in both Treatment and Control group, as expected. 
-p1_1 <-   ggplot(data, aes(x = log(X_T), y = log(sd_T))) + 
-      geom_point(size = 2, col = "black") + 
-      geom_point(aes(x = log(X_C), y = log(sd_C)), col = "grey", size = 2) + 
-      geom_abline() + 
-      labs(x = "log Mean", y = "log SD") + theme_bw()
-
-p2_2 <-ggplot(data, aes(x = X_T, y = sd_T)) + 
-      geom_point(size = 2, col = "black") + 
-      geom_point(aes(x = X_C, y = sd_C), col = "grey", size = 2) + 
-      geom_abline() + 
-      labs(x = "Mean", y = "SD") + theme_bw()
-
-(p1_1 | p2_2) + plot_annotation(tag_levels = "A", tag_suffix = ")")
 
 ## Geary's test to check normality assumptions
 data <- data %>% 
@@ -647,8 +634,29 @@ robust_model1_lnSD <- robust(model1_lnSD, cluster = final_long$study, vcov = "CR
       # Final tables
   ################
 
-  data_cvr %>% ggplot(aes(y = 1/ sqrt(v_logCVR), x = mean(logCVR))) + geom_point()
 
+```
+
+# Supplemental Analysis using lnSD
+
+A number of effect size measures have been proposed to compare changes in variability between two groups. @nakagawa2015meta introduced the log Coefficient of Variation Ratio (lnCVR) and log Variance ratio (lnVR) as two key measures. lnVR makes no assumptions about mean-variance relationships, however, lnCVR assumes the relationship is linear on the natural scale [@nakagawa2015meta; @Senior2017; @Senior2016]. It was clear from our data that there was a strong mean-variance relationship (Fig. S\@ref(fig:sfig)), as such, we resorted to using lnCVR, particularly because treatments also had a strong effect on the mean (see main analysis). 
+
+The lnCVR effect size does have limitations which are not always upheld in practice [@nakagawa2015meta]. As such, we tested whether these assumptions impacted our inferences by re-running analyses using the log Standard Deviation (lnSD) as our effect size while controlling for log Mean (lnX) using a multilevel meta-regression model using *metafor* (version `r utils::packageVersion("metafor")`) that included lnX along with a two level categorical predictor for treatment (Control vs Treatment) as fixed effects to both control for mean-variance relationship and estimate the effect contrast between control and treatment groups. The effect contrast should approximate lnCVR if assumptions are upheld. As random effects, we included study, species, and a residual variance (given *metafor* does not include this by default). We also included a random slope effects for each control and treatment comparison within a study to model variation across studies in effects.
+
+```{r, fig.align='center', fig.cap= "Mean-variance relationships between the standard deviation (SD) and mean in the control ('grey' points) and treatment groups ('black' points). A) Mean-variance relationship on the log scale and B) natural scale."}
+p1_1 <-   ggplot(data, aes(x = log(X_T), y = log(sd_T))) + 
+      geom_point(size = 2, col = "black") + 
+      geom_point(aes(x = log(X_C), y = log(sd_C)), col = "grey", size = 2) + 
+      geom_abline() + 
+      labs(x = "log Mean", y = "log SD") + theme_bw()
+
+p2_2 <-ggplot(data, aes(x = X_T, y = sd_T)) + 
+      geom_point(size = 2, col = "black") + 
+      geom_point(aes(x = X_C, y = sd_C), col = "grey", size = 2) + 
+      geom_abline() + 
+      labs(x = "Mean", y = "SD") + theme_bw()
+
+(p1_1 | p2_2) + plot_annotation(tag_levels = "A", tag_suffix = ")")
 ```
 
 
