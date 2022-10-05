@@ -427,13 +427,15 @@ data <- data %>%
                        method = "REML", data = final_long)
 robust_model1_lnSD <- robust(model1_lnSD, cluster = final_long$study, vcov = "CR2")
       
-   
-   
-   
   ###############
       # Final tables
   ################
 
+ coefs_lnSD <- coef(model1_lnSD)
+ ci.lb_lnSD <- model1_lnSD$ci.lb
+ ci.ub_lnSD <- model1_lnSD$ci.ub
+ 
+ 
 
 ```
 
