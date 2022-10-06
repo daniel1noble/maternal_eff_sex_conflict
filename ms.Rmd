@@ -32,7 +32,7 @@
 #devtools::install_github("daniel1noble/orchaRd", force = TRUE)
 #devtools::install_github("daniel1noble/metaAidR", force = TRUE)
 
-  pacman::p_load(tidyverse, metafor, brms, orchaRd, ape, phytools, metaAidR, orchaRd, gt, kableExtra, flextable, patchwork, latex2exp, MuMIn, equatiomatic, magrittr, data.table)
+  pacman::p_load(tidyverse, metafor, brms, orchaRd, ape, phytools, metaAidR, orchaRd, gt, kableExtra, flextable, patchwork, latex2exp, MuMIn, equatiomatic, magrittr, data.table, forestmangr)
 eval(metafor:::.MuMIn)
 ```
 
@@ -436,10 +436,10 @@ robust_model1_lnSD <- robust(model1_lnSD, cluster = final_long$study, vcov = "CR
  ci.ub_lnSD <- model1_lnSD$ci.ub
  randef <- confint(model1_lnSD)
  
-  table_fixed <- data.frame( Parameter = c("Intercept", "Treatment (Control)", "ln Mean", ""), 
-                            Estimates = c(coefs_lnSD, ""),
-                       `Upper 95% CI` = c(ci.ub_lnSD, ""),
-                       `Lower 95% CI` = c(ci.lb_lnSD, ""), check.names = FALSE, row.names = NULL)
+  table_fixed <- forestmangr::round_df(data.frame( Parameter = c("Intercept", "Treatment (Control)", "ln Mean", ""), 
+                            Estimates = as.numeric(c(coefs_lnSD, "")),
+                       `Upper 95% CI` = as.numeric(c(ci.ub_lnSD, "")),
+                       `Lower 95% CI` = as.numeric(c(ci.lb_lnSD, "")), check.names = FALSE, row.names = NULL), digits = 3)
   
 dat <- data.frame()
   
@@ -449,10 +449,10 @@ dat <- data.frame()
   }
   names(dat) <- c("est", "lb", "up")
   
-  table_rand <- data.frame(     Parameter = c("Study", "Residual", "Species", "tau^2", "rho"), 
+  table_rand <- forestmangr::round_df(data.frame(     Parameter = c("Study", "Residual", "Species", "tau^2", "rho"), 
                                 Estimates = dat$est, 
                            `Upper 95% CI` = dat$lb,
-                           `Lower 95% CI` = dat$up,check.names = FALSE, row.names = NULL)
+                           `Lower 95% CI` = dat$up,check.names = FALSE, row.names = NULL), digits = 3)
 ```
 
 
@@ -663,6 +663,8 @@ Female lifespan or the difference in lifespan between males and females of a spe
 A number of effect size measures have been proposed to compare changes in variability between two groups. @nakagawa2015meta introduced the log Coefficient of Variation Ratio (lnCVR) and log Variance ratio (lnVR) as two key measures. lnVR makes no assumptions about mean-variance relationships, however, lnCVR assumes the relationship is linear on the natural scale [@nakagawa2015meta; @Senior2017; @Senior2016]. It was clear from our data that there was a strong mean-variance relationship (Fig. S\@ref(fig:figs1)), as such, we resorted to using lnCVR, particularly because treatments also had a strong effect on the mean (see main analysis). 
 
 The lnCVR effect size does have limitations which are not always upheld in practice [@nakagawa2015meta]. As such, we tested whether these assumptions impacted our inferences by re-running analyses using the log Standard Deviation (lnSD) as our effect size while controlling for log Mean (lnX) using a multilevel meta-regression model using *metafor* (version `r utils::packageVersion("metafor")`) that included lnX along with a two level categorical predictor for treatment (Control vs Treatment) as fixed effects to both control for mean-variance relationship and estimate the effect contrast between control and treatment groups. The effect contrast should approximate lnCVR if assumptions are upheld. As random effects, we included study, species, and a residual variance (given *metafor* does not include this by default). We also included a random slope for each control and treatment comparison within a study to model variation in effects across studies.
+
+Overall, our results were largely consistent with our analysis using lnCVR, with average variability differences being estimated to be approximately similar (See Table S\@ref(tab:tables1)).
 
 ```{r, figs1, fig.align='center', fig.cap= "Mean-variance relationships between the standard deviation (SD) and mean in the control ('grey' points) and treatment groups ('black' points). A) Mean-variance relationship on the log scale and B) natural scale."}
 p1_1 <-   ggplot(data, aes(x = log(X_T), y = log(sd_T))) + 
