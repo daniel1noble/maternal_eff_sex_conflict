@@ -680,14 +680,17 @@ p2_2 <-ggplot(data, aes(x = X_T, y = sd_T)) +
 (p1_1 | p2_2) + plot_annotation(tag_levels = "A", tag_suffix = ")")
 ```
 
-```{r, tables1, tab.cap = "Multi-level meta-regression model with log standard deviation (lnSD)"}
+```{r, tables1,  tab.cap = "Multi-level meta-regression model with log standard deviation (lnSD)"}
 flextable(rbind(table_fixed,table_rand)) %>% 
-      add_header_row(values = "Fixed Effects", colwidths = 3) %>% 
+      add_header_row(values = "Fixed Effects", colwidths = 4) %>% 
       bold(part = "header", i = 1) %>% 
       width(j = c(2,3,4), width = c(5, 2, 2)) %>%
       align(align = "center", part = "all") %>% 
-      compose(i = 4, j = 3, value = as_paragraph(as_b("Random Effects")))
+      compose(i = 4, j = 3, value = as_paragraph(as_b("Random Effects"))) %>% 
+      
+      autofit()
       
 ```
+
 
 # References
