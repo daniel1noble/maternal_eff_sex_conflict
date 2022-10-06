@@ -434,9 +434,25 @@ robust_model1_lnSD <- robust(model1_lnSD, cluster = final_long$study, vcov = "CR
  coefs_lnSD <- coef(model1_lnSD)
  ci.lb_lnSD <- model1_lnSD$ci.lb
  ci.ub_lnSD <- model1_lnSD$ci.ub
+ randef <- confint(model1_lnSD)
  
- 
-
+  table_fixed <- data.frame( name = c("Intercept", "Treatment (Control)", "ln Mean"), 
+                            Estimates = coefs_lnSD,
+                       `Upper 95% CI` = ci.ub_lnSD,
+                       `Lower 95% CI` = ci.lb_lnSD, check.names = FALSE, row.names = NULL)
+  
+dat <- data.frame()
+  
+  for(i in 1:(length(randef)-1)){
+    tmp <- randef[[i]][1]$random[1,]
+    dat <- rbind(dat, tmp)
+  }
+  names(dat) <- c("est", "lb", "up")
+  
+  table_rand <- data.frame(     Name = c("Study", "Residual", "Species", "tau^2", "rho"), 
+                                Estimate = dat$est, 
+                           `Upper 95% CI` = dat$lb,
+                           `Lower 95% CI` = dat$up,check.names = FALSE, row.names = NULL)
 ```
 
 
@@ -664,5 +680,11 @@ p2_2 <-ggplot(data, aes(x = X_T, y = sd_T)) +
 (p1_1 | p2_2) + plot_annotation(tag_levels = "A", tag_suffix = ")")
 ```
 
+```{r, tables1, tab.cap = "Multi-level meta-regression model with log standard deviation (lnSD)"}
+flextable(table_fixed) %>% 
+      add_header_row(values = "Fixed Effects", colwidths = 4) %>% 
+      bold(part = "header", i = 1) %>% 
+      width(j = c(3,4))
+```
 
 # References
