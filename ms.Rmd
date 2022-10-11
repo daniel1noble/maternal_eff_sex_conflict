@@ -439,7 +439,13 @@ robust_model1_lnSD <- robust(model1_lnSD, cluster = final_long$study, vcov = "CR
                        method = "REML", data = data_cvr)
     robust_model1_lnCVR <- robust(model1_lnCVR_harm, cluster = data_cvr$study, vcov = "CR2")
 
-      
+    lncvr_results <- mod_results(robust_model1_lnCVR, mod = "Harm_type", data = data_cvr, group = "species")$mod_table
+  
+  # Add N
+  n <- data_cvr %>% group_by(Harm_type) %>% summarise(n = n(), nstdy = length(unique(study)))
+  lncvr_results$n <- n$n
+  lncvr_results$nstudy <- n$nstdy
+  names(lncvr_results)[1] <- "moderator"
   ###############
       # Final tables
   ################
@@ -538,9 +544,9 @@ ft %>%
 
 #### Negative effects on fitness and the type of harm done to females
 
-Male harm type appeared to impact the overall magnitude of effects explaining `r male_harm_r2[1]*100`% of effect size variance (Figure \@ref(fig:maleharm)). Species where mating results in both direct and indirect harm to females have males that significantly impact female fitness (overall meta-analytic mean: `r robust_model1.5_2$beta[1]`, 95% CI: `r robust_model1.5_2$ci.lb[1]` to `r robust_model1.5_2$ci.ub[1]`,  p = `r p_value(robust_model1.5_2$pval[1])`). Surprisingly, however, species with direct female harm only (i.e., traumatic insemination), showed a small and opposite effect on female fitness (overall meta-analytic mean: `r robust_model1.5_2$beta[2]`, 95% CI: `r robust_model1.5_2$ci.lb[2]` to `r robust_model1.5_2$ci.ub[2]`; Figure \@ref(fig:maleharm)), however, this effect did not differ significantly from zero (p = `r p_value(robust_model1.5_2$pval[2])`). While indirect male harm also resulted in a smaller overall meta-analytic mean relative to species with both, it was still significantly positive (overall meta-analytic mean: `r robust_model1.5_2$beta[3]`, 95% CI: `r robust_model1.5_2$ci.lb[3]` to `r robust_model1.5_2$ci.ub[3]`,  p = `r p_value(robust_model1.5_2$pval[3])`), and only marginally different than species with both direct and indirect male harm (Figure \@ref(fig:maleharm)). Regardless, differences among species exhibiting different types of female harm seemed to be driven primarily by
-a single study (Taylor, 2008) on *Drosophila melanogaster* (very high Cook's distance). Removing this effect resulted in no significant difference between harm type categories. 
+Male harm type appeared to impact the overall magnitude of effects explaining `r male_harm_r2[1]*100`% of effect size variance (Figure \@ref(fig:maleharm)). Species where mating results in both direct and indirect harm to females have males that significantly impact female fitness (overall meta-analytic mean: `r robust_model1.5_2$beta[1]`, 95% CI: `r robust_model1.5_2$ci.lb[1]` to `r robust_model1.5_2$ci.ub[1]`,  p = `r p_value(robust_model1.5_2$pval[1])`). Surprisingly, however, species with direct female harm only (i.e., traumatic insemination), showed a small and opposite effect on female fitness (overall meta-analytic mean: `r robust_model1.5_2$beta[2]`, 95% CI: `r robust_model1.5_2$ci.lb[2]` to `r robust_model1.5_2$ci.ub[2]`; Figure \@ref(fig:maleharm)), however, this effect did not differ significantly from zero (p = `r p_value(robust_model1.5_2$pval[2])`). While indirect male harm also resulted in a smaller overall meta-analytic mean relative to species with both, it was still significantly positive (overall meta-analytic mean: `r robust_model1.5_2$beta[3]`, 95% CI: `r robust_model1.5_2$ci.lb[3]` to `r robust_model1.5_2$ci.ub[3]`,  p = `r p_value(robust_model1.5_2$pval[3])`), and only marginally different than species with both direct and indirect male harm (Figure \@ref(fig:maleharm)). Regardless, differences among species exhibiting different types of female harm seemed to be driven primarily by a single study (Taylor, 2008) on *Drosophila melanogaster* (very high Cook's distance). Removing this effect resulted in no significant difference between harm type categories. 
 
+Harm type did not impact the overall variance in female fitness between control and treatment groups ($F_{2,140}$ = `r model1_lnCVR_harm$QM`, p = `r model1_lnCVR_harm$QMp` - Figure \@ref(fig:maleharm)). 
 
 ```{r maleharm, fig.width=11.56944, fig.height=7.62500, fig.cap="Distribution of effect sizes, overall meta-analytic mean estimates and 95% confidence intervals (CIs) across species with different types of male harm towards females. Total effect sizes (n) and total number of studies (k) are provided for each level of Male Harm Type. Relevant contrasts between meta-analytic means are provided, along with 95% CIs and significance of contrast. Note that this includes all data. Removing outlier point from single study results in no different between harm type categories. "}
 
@@ -588,6 +594,38 @@ harm_plot <- ggplot(data, aes(x = Harm_type, y = SMDH)) +
               annotate('text', x = 1 + ((2-1) / 2), y = 5, label = TeX(contrast1), size = 4) + 
               annotate('text', x = 1 + ((3-1) / 2), y = 5.7, label = TeX(contrast2), size = 4) 
               #annotate('text', x = 2 + ((2-1) / 2), y = -1, label = TeX(contrast3), size = 2.5)
+
+harm_plotvar <- ggplot(data_cvr, aes(x = Harm_type, y = logCVR)) + 
+              geom_violin(alpha = 0.2, aes(fill = Harm_type, colour = Harm_type)) + 
+              #geom_point() + don't need this because we have geom_jitter. It will otherwise double plot points
+              ylim(c(-2, 2.5)) + 
+              geom_jitter(aes(x = Harm_type, y = logCVR, fill = Harm_type, colour = Harm_type, size = 1/sqrt(v_logCVR)),
+                          width = 0.08, alpha = 0.2) + 
+              theme_bw() + 
+		          theme(legend.background = element_blank(),
+			                     legend.key = element_blank()) + 
+              labs(x = "Harm Type", 
+                   y = "ln CVR", 
+                   size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{lnCVR}}}\\right)$")) +
+              scale_x_discrete(labels = c("Both", "Direct", "Indirect")) +
+              guides(size = guide_legend(override.aes = list(linetype = 0))) + 
+              scale_colour_discrete(guide = FALSE) +
+              scale_fill_discrete(guide = FALSE) + 
+              annotate('text', x = (seq(1, 3, 1)), y = 2, 
+                       label= paste0("italic(n)==", lncvr_results$n), parse = TRUE, size = 3.5) +     
+              annotate('text', x = (seq(1, 3, 1)), y = 1.8, 
+                       label= paste0("italic(k)==", lncvr_results$nstudy), parse = TRUE, size = 3.5) +     
+        	  	# 95 %CI: branches
+        	    geom_errorbar(data = lncvr_results,  aes(x = moderator, y = estimate, ymin = lowerCL, ymax = upperCL), 
+        	                  height = 0, show.legend = FALSE, size = 0.5, width = 0.05) +
+              geom_point(data = lncvr_results, aes(x = moderator, y = estimate, colour= moderator), size = 5)+
+              geom_segment(aes(x = 1, y = 4.8, xend = 2, yend = 4.8), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) + 
+              geom_segment(aes(x = 1, y = 5.5, xend = 3, yend = 5.5), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) +
+              #geom_segment(aes(x = 2, y = -1, xend = 3, yend = -1), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both"))
+              annotate('text', x = 1 + ((2-1) / 2), y = 5, label = TeX(contrast1), size = 4) + 
+              annotate('text', x = 1 + ((3-1) / 2), y = 5.7, label = TeX(contrast2), size = 4) 
+              #annotate('text', x = 2 + ((2-1) / 2), y = -1, label = TeX(contrast3), size = 2.5)
+
 ggsave(plot = harm_plot, filename = "fig2.png", path = "./output/figs", height = 7.416667, width = 13.805556, device = "png", dpi = 600)
 harm_plot
 ```
