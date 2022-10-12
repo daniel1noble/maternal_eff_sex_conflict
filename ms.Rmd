@@ -556,7 +556,7 @@ Male harm type appeared to impact the overall magnitude of effects explaining `r
 
 Harm type did not impact the overall variance in female fitness between control and treatment groups ($F_{2,140}$ = `r model1_lnCVR_harm$QM`, p = `r model1_lnCVR_harm$QMp` - Figure \@ref(fig:maleharm)). 
 
-```{r maleharm, fig.width=11.56944, fig.height=7.62500, fig.cap="Distribution of effect sizes, overall meta-analytic mean estimates and 95% confidence intervals (CIs) across species with different types of male harm towards females. Total effect sizes (n) and total number of studies (k) are provided for each level of Male Harm Type. Relevant contrasts between meta-analytic means are provided, along with 95% CIs and significance of contrast. Note that this includes all data. Removing outlier point from single study results in no different between harm type categories. "}
+```{r maleharm, fig.width=20.8, fig.height=7.4, fig.cap="Distribution of effect sizes, overall meta-analytic mean estimates and 95% confidence intervals (CIs) across species with different types of male harm towards females. A) Standardised Mean Difference with Heteroscedasticity correction (SMDH) and B) the log Coefficient of Variation (lnCVR). Total effect sizes (n) and total number of studies (k) are provided for each level of Male Harm Type. Relevant contrasts between meta-analytic means are provided, along with 95% CIs and significance of contrast. Note that this includes all data. Removing outlier point from single study results in no different between harm type categories. "}
 
 # model results
 rownames(robust_model1.5_2_PI) <- 1:dim(robust_model1.5_2_PI)[1]
@@ -566,9 +566,13 @@ robust_model1.5_2_PI <- robust_model1.5_2_PI[1:3,]
 
 # We'll use the contrast model to get what we need to plot stats above comparison bars
 
-contrast1 <- paste0("$\\beta_{contrast}$ = ", round(robust_model1.5$beta[2], digit = 2), ", 95% CI:", round(robust_model1.5$ci.lb[2], digit = 2), " to ", round(robust_model1.5$ci.ub[2], digit = 2), ", $\\textbf{p ", p_value(robust_model1.5$pval[2]), "}$")
+contrast1 <- paste0("$\\beta_{contrast}$ = ", round(robust_model1.5$beta[2], digit = 2), ", 95% CI:", round(robust_model1.5$ci.lb[2], digit = 2), " to ", round(robust_model1.5$ci.ub[2], digit = 2), ", $\\textbf{p =", p_value(robust_model1.5$pval[2]), "}$")
 
 contrast2 <- paste0("$\\beta_{contrast}$ = ", round(robust_model1.5$beta[3], digit = 2), ", 95% CI:", round(robust_model1.5$ci.lb[3], digit = 2), " to ", round(robust_model1.5$ci.ub[3], digit = 2), ", p = ", p_value(robust_model1.5$pval[3]))
+
+contrast1v <- paste0("$\\beta_{contrast}$ = ", round(robust_model1_lnCVR_harm$beta[2], digit = 2), ", 95% CI:", round(robust_model1_lnCVR_harm$ci.lb[2], digit = 2), " to ", round(robust_model1_lnCVR_harm$ci.ub[2], digit = 2), ", $p =", p_value(robust_model1_lnCVR_harm$pval[2]), "$")
+
+contrast2v <- paste0("$\\beta_{contrast}$ = ", round(robust_model1_lnCVR_harm$beta[3], digit = 2), ", 95% CI:", round(robust_model1.5$ci.lb[3], digit = 2), " to ", round(robust_model1_lnCVR_harm$ci.ub[3], digit = 2), ", p = ", p_value(robust_model1_lnCVR_harm$pval[3]))
 
 # When making this plot we are feeding in two different types of data. This can be a tad tricky because you need to understand how data is mapped. See nice explanation here:https://stackoverflow.com/questions/31069324/adding-points-from-other-dataset-to-ggplot2
 
@@ -578,7 +582,7 @@ harm_plot <- ggplot(data, aes(x = Harm_type, y = SMDH)) +
               ylim(c(-2, 6.5)) + 
               geom_jitter(aes(x = Harm_type, y = SMDH, fill = Harm_type, colour = Harm_type, size = 1/sqrt(v_SMDH)),
                           width = 0.08, alpha = 0.2) + 
-              theme_bw() + 
+              theme_classic() + 
 		          theme(legend.background = element_blank(),
 			                     legend.key = element_blank()) + 
               labs(x = "Harm Type", 
@@ -603,17 +607,19 @@ harm_plot <- ggplot(data, aes(x = Harm_type, y = SMDH)) +
               annotate('text', x = 1 + ((3-1) / 2), y = 5.7, label = TeX(contrast2), size = 4) 
               #annotate('text', x = 2 + ((2-1) / 2), y = -1, label = TeX(contrast3), size = 2.5)
 
+lncvr_results$moderator <- c("both", "direct", "indirect")
+
 harm_plotvar <- ggplot(data_cvr, aes(x = Harm_type, y = logCVR)) + 
               geom_violin(alpha = 0.2, aes(fill = Harm_type, colour = Harm_type)) + 
               #geom_point() + don't need this because we have geom_jitter. It will otherwise double plot points
               ylim(c(-2, 2.5)) + 
               geom_jitter(aes(x = Harm_type, y = logCVR, fill = Harm_type, colour = Harm_type, size = 1/sqrt(v_logCVR)),
                           width = 0.08, alpha = 0.2) + 
-              theme_bw() + 
+              theme_classic() + 
 		          theme(legend.background = element_blank(),
 			                     legend.key = element_blank()) + 
               labs(x = "Harm Type", 
-                   y = "ln CVR", 
+                   y = "log Coefficient of Variation (lnCVR)", 
                    size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{lnCVR}}}\\right)$")) +
               scale_x_discrete(labels = c("Both", "Direct", "Indirect")) +
               guides(size = guide_legend(override.aes = list(linetype = 0))) + 
@@ -626,7 +632,12 @@ harm_plotvar <- ggplot(data_cvr, aes(x = Harm_type, y = logCVR)) +
         	  	# 95 %CI: branches
         	    geom_errorbar(data = lncvr_results,  aes(x = loc, y = estimate, ymin = lowerCL, ymax = upperCL), 
         	                  height = 0, show.legend = FALSE, size = 0.5, width = 0.05) +
-              geom_point(data = lncvr_results, aes(x = loc, y = estimate), size = 5)
+              geom_point(data = lncvr_results, aes(x = loc, y = estimate, colour= moderator), size = 5) +
+              geom_segment(aes(x = 1, y = 1, xend = 2, yend = 1), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) + 
+              geom_segment(aes(x = 1, y = 1.3, xend = 3, yend = 1.3), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) +
+              #geom_segment(aes(x = 2, y = -1, xend = 3, yend = -1), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both"))
+              annotate('text', x = 1 + ((2-1) / 2), y = 1.1, label = TeX(contrast1v), size = 4) + 
+              annotate('text', x = 1 + ((3-1) / 2), y = 1.4, label = TeX(contrast2v), size = 4) 
             
 plot <- (harm_plot + harm_plotvar) + plot_annotation(tag_levels = "A", tag_suffix = ")")
 
@@ -645,7 +656,7 @@ contrast3bottom2 <- paste0("p = ", p_value(robust_model1.5$pval[4]))
 
 p3 = ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDH), colour = Harm_type)) + 
     geom_point(alpha = 0.6) + 
-      theme_bw() + 
+      theme_classic() + 
   labs(x = "Sexual Size Dimorphism (SSD) Index", 
 	     y = "SMDH",
 	  size = TeX("Precision $\\left(\\frac{1}{\\sqrt{v_{SMDH}}}\\right)$"),
@@ -681,7 +692,7 @@ sperm_plot = ggplot(sperm_data, aes(x = SCR.SCI, y = SMDH)) +
               geom_jitter(aes(x = SCR.SCI, y = SMDH, fill = SCR.SCI, colour = SCR.SCI, size = 1/sqrt(v_SMDH)),
                           width = 0.08, alpha = 0.1) + 
               ylim(c(-1.5, 6))+
-              theme_bw() + 
+              theme_classic() + 
 		          theme(legend.background = element_blank(),
 			                     legend.key = element_blank()) + 
               labs(x = "Sperm Competition Intensity", 
