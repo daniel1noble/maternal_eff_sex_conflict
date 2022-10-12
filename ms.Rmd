@@ -639,7 +639,7 @@ harm_plotvar <- ggplot(data_cvr, aes(x = Harm_type, y = logCVR)) +
             
 plot <- (harm_plot + harm_plotvar) + plot_annotation(tag_levels = "A", tag_suffix = ")")
 
-ggsave(plot = plot, filename = "fig2.png", path = "./output/figs", height = 7.416667, width = 13.805556, device = "png", dpi = 600)
+ggsave(plot = plot, filename = "fig2.png", path = "./output/figs", height = 7.4, width = 20.8, device = "png", dpi = 600)
 plot
 ```
 
