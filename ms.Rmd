@@ -674,6 +674,9 @@ p3 = ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDH), colour = Ha
   annotate('text', x = -0.4, y = 4.5, label = TeX(contrast3top), size = 5) +
   annotate('text', x = -0.4, y = 4.2, label = TeX(contrast3bottom), size = 5) +
   annotate('text', x = -0.4, y = 3.9, label = TeX(contrast3bottom2, italic = TRUE), size = 5) +
+  #geom_smooth(aes(x = SSD_lnRR, y = robust_model1.3_nonZ$ci.lb[1]), method =  "lm", formula = y~x,se = FALSE,lty = "dashed") +
+  #geom_smooth(aes(x = SSD_lnRR, y = robust_model1.3_nonZ$ci.ub[1]), method =  "lm", formula = y~x,se = FALSE, lty ="dashed")
+  #geom_smooth(aes(x = SSD_lnRR, y = robust_model1.3_nonZ$beta[1] + robust_model1.3_nonZ$beta[2]*SSD_lnRR), method =  "lm", formula = y~x, se = FALSE)
   geom_abline(intercept = robust_model1.3_nonZ$beta[1], slope = robust_model1.3_nonZ$beta[2]) + axis_size# Note using model1.3 for plotting because this is marginalised across Harm_type. 
 
 ggsave(plot = p3, filename = "fig3.png", path = "./output/figs", height = 7, width = 10, device = "png", dpi = 600)
