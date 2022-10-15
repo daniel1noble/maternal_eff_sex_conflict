@@ -527,6 +527,8 @@ p3 <-  orchard_plot(model1_lnCVR, group = "species", data = data_cvr,
 p4 <- (p1 + (p2 / p3)) + plot_annotation(tag_levels = "A", tag_suffix = ")")
 p4
 ggsave(plot = p4, filename = "fig1.png", width = 12, height= 5, path = "./output/figs", units = "in", device="png", dpi = 600)
+ggsave(plot = p4, filename = "fig1.pdf", path = "./output/figs", height = 7, width = 10, device = "pdf")
+
 ```
 
 ```{r table1, tab.cap = "Number of effect sizes, studies and species along with overall meta-analytic mean (average SMDH) and 95% confidence (CI) and prediction intervals (PI). Heterogeneity estimates and 95% CI's are also provided for study, trait, species and total heterogeneity (excluding sampling variance)"}
@@ -574,6 +576,11 @@ contrast2v <- paste0("$\\beta_{contrast}$ = ", round(robust_model1_lnCVR_harm$be
 
 # When making this plot we are feeding in two different types of data. This can be a tad tricky because you need to understand how data is mapped. See nice explanation here:https://stackoverflow.com/questions/31069324/adding-points-from-other-dataset-to-ggplot2
 
+axis_size <- theme(axis.title = element_text(size = 20), 
+                    axis.text = element_text(size = 14),
+                   legend.text = element_text(size = 14),
+                   legend.title = element_text(size = 14))
+
 harm_plot <- ggplot(data, aes(x = Harm_type, y = SMDH)) + 
               geom_violin(alpha = 0.2, aes(fill = Harm_type, colour = Harm_type)) + 
               #geom_point() + don't need this because we have geom_jitter. It will otherwise double plot points
@@ -591,9 +598,9 @@ harm_plot <- ggplot(data, aes(x = Harm_type, y = SMDH)) +
               scale_colour_discrete(guide = FALSE) +
               scale_fill_discrete(guide = FALSE) + 
               annotate('text', x = (seq(1, 3, 1)), y = 6.45, 
-                       label= paste0("italic(n)==", robust_model1.5_2_PI$n), parse = TRUE, size = 3.5) +     
+                       label= paste0("italic(n)==", robust_model1.5_2_PI$n), parse = TRUE, size = 5) +     
               annotate('text', x = (seq(1, 3, 1)), y = 6.15, 
-                       label= paste0("italic(k)==", robust_model1.5_2_PI$nstudy), parse = TRUE, size = 3.5) +     
+                       label= paste0("italic(k)==", robust_model1.5_2_PI$nstudy), parse = TRUE, size = 5) +     
         	  	# 95 %CI: branches
         	    geom_errorbar(data = robust_model1.5_2_PI,  aes(x = moderator, y = Est, ymin = lwr.CI, ymax = up.CI), 
         	                  height = 0, show.legend = FALSE, size = 0.5, width = 0.05) +
@@ -601,8 +608,9 @@ harm_plot <- ggplot(data, aes(x = Harm_type, y = SMDH)) +
               geom_segment(aes(x = 1, y = 4.8, xend = 2, yend = 4.8), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) + 
               geom_segment(aes(x = 1, y = 5.5, xend = 3, yend = 5.5), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) +
               #geom_segment(aes(x = 2, y = -1, xend = 3, yend = -1), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both"))
-              annotate('text', x = 1 + ((2-1) / 2), y = 5, label = TeX(contrast1), size = 4) + 
-              annotate('text', x = 1 + ((3-1) / 2), y = 5.7, label = TeX(contrast2), size = 4) 
+              annotate('text', x = 1 + ((2-1) / 2), y = 5, label = TeX(contrast1), size = 5) + 
+              annotate('text', x = 1 + ((3-1) / 2), y = 5.7, label = TeX(contrast2), size = 5) +
+              axis_size
               #annotate('text', x = 2 + ((2-1) / 2), y = -1, label = TeX(contrast3), size = 2.5)
 
 lncvr_results$moderator <- c("both", "direct", "indirect")
@@ -624,9 +632,9 @@ harm_plotvar <- ggplot(data_cvr, aes(x = Harm_type, y = logCVR)) +
               scale_colour_discrete(guide = FALSE) +
               scale_fill_discrete(guide = FALSE) + 
               annotate('text', x = (seq(1, 3, 1)), y = 2, 
-                       label= paste0("italic(n)==", lncvr_results$n), parse = TRUE, size = 3.5) +     
+                       label= paste0("italic(n)==", lncvr_results$n), parse = TRUE, size = 5) +     
               annotate('text', x = (seq(1, 3, 1)), y = 1.8, 
-                       label= paste0("italic(k)==", lncvr_results$nstudy), parse = TRUE, size = 3.5) +     
+                       label= paste0("italic(k)==", lncvr_results$nstudy), parse = TRUE, size = 5) +     
         	  	# 95 %CI: branches
         	    geom_errorbar(data = lncvr_results,  aes(x = loc, y = estimate, ymin = lowerCL, ymax = upperCL), 
         	                  height = 0, show.legend = FALSE, size = 0.5, width = 0.05) +
@@ -634,12 +642,14 @@ harm_plotvar <- ggplot(data_cvr, aes(x = Harm_type, y = logCVR)) +
               geom_segment(aes(x = 1, y = 1, xend = 2, yend = 1), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) + 
               geom_segment(aes(x = 1, y = 1.3, xend = 3, yend = 1.3), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) +
               #geom_segment(aes(x = 2, y = -1, xend = 3, yend = -1), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both"))
-              annotate('text', x = 1 + ((2-1) / 2), y = 1.1, label = TeX(contrast1v), size = 4) + 
-              annotate('text', x = 1 + ((3-1) / 2), y = 1.4, label = TeX(contrast2v), size = 4) 
+              annotate('text', x = 1 + ((2-1) / 2), y = 1.1, label = TeX(contrast1v), size = 5) + 
+              annotate('text', x = 1 + ((3-1) / 2), y = 1.4, label = TeX(contrast2v), size = 5) +
+              axis_size
             
-plot <- (harm_plot + harm_plotvar) + plot_annotation(tag_levels = "A", tag_suffix = ")")
+plot <- (harm_plot + harm_plotvar) + plot_annotation(tag_levels = "A", tag_suffix = ")") & theme(plot.tag = element_text(size = 24))
 
 ggsave(plot = plot, filename = "fig2.png", path = "./output/figs", height = 7.4, width = 20.8, device = "png", dpi = 600)
+ggsave(plot = plot, filename = "fig2.pdf", path = "./output/figs", height = 7, width = 10, device = "pdf")
 plot
 ```
 
@@ -664,9 +674,10 @@ p3 = ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDH), colour = Ha
   annotate('text', x = -0.4, y = 4.5, label = TeX(contrast3top), size = 5) +
   annotate('text', x = -0.4, y = 4.2, label = TeX(contrast3bottom), size = 5) +
   annotate('text', x = -0.4, y = 3.9, label = TeX(contrast3bottom2, italic = TRUE), size = 5) +
-  geom_abline(intercept = robust_model1.3_nonZ$beta[1], slope = robust_model1.3_nonZ$beta[2]) # Note using model1.3 for plotting because this is marginalised across Harm_type. 
+  geom_abline(intercept = robust_model1.3_nonZ$beta[1], slope = robust_model1.3_nonZ$beta[2]) + axis_size# Note using model1.3 for plotting because this is marginalised across Harm_type. 
 
 ggsave(plot = p3, filename = "fig3.png", path = "./output/figs", height = 7, width = 10, device = "png", dpi = 600)
+ggsave(plot = p3, filename = "fig3.pdf", path = "./output/figs", height = 7, width = 10, device = "pdf")
 p3
 ```
 
@@ -701,19 +712,20 @@ sperm_plot = ggplot(sperm_data, aes(x = SCR.SCI, y = SMDH)) +
               scale_colour_discrete(guide = FALSE) +
               scale_fill_discrete(guide = FALSE) + 
               annotate('text', x = (seq(1, 2, 1)), y = 6, 
-                       label= paste0("italic(n)==", robust_model1.7_PI$n[1:2]), parse = TRUE, size = 3.5) +     
+                       label= paste0("italic(n)==", robust_model1.7_PI$n[1:2]), parse = TRUE, size = 5) +     
               annotate('text', x = (seq(1, 2, 1)), y = 5.7, 
-                       label= paste0("italic(k)==", robust_model1.7_PI$nstdy[1:2]), parse = TRUE, size = 3.5) +     
+                       label= paste0("italic(k)==", robust_model1.7_PI$nstdy[1:2]), parse = TRUE, size = 5) +     
         	  	# 95 %CI: branches
         	    geom_errorbar(data = robust_model1.7_PI,  aes(x = moderator, y = Est, ymin = lwr.CI, ymax = up.CI), 
                             show.legend = FALSE, size = 0.5, width = 0.05) +
               geom_point(data = robust_model1.7_PI, aes(x = moderator, y = Est, colour= moderator), size = 5) +
               geom_segment(aes(x = 1, y = 5.35, xend = 2, yend = 5.35), arrow = arrow(length = unit(0.1, "cm"), angle = 90, end = "both")) + 
-  annotate('text', x = 1.5, y = 5, label = TeX(contrast_sperm), size = 3) + 
-    annotate('text', x = 1.5, y = 4.6, label = TeX(contrast_sperm2), size = 3) + 
-    annotate('text', x = 1.5, y = 4.2, label = TeX(contrast_sperm3), size = 3)
+  annotate('text', x = 1.5, y = 5, label = TeX(contrast_sperm), size = 5) + 
+    annotate('text', x = 1.5, y = 4.6, label = TeX(contrast_sperm2), size = 5) + 
+    annotate('text', x = 1.5, y = 4.2, label = TeX(contrast_sperm3), size = 5) + axis_size
 
 ggsave(plot = sperm_plot, filename = "fig4.png", path = "./output/figs", height = 7, width = 10, device = "png", dpi = 600)
+ggsave(plot = sperm_plot, filename = "fig4.pdf", path = "./output/figs", height = 7, width = 10, device = "pdf")
 sperm_plot
 
 ```
@@ -737,15 +749,17 @@ p1_1 <-   ggplot(data, aes(x = log(X_T), y = log(sd_T))) +
       geom_point(size = 2, col = "black") + 
       geom_point(aes(x = log(X_C), y = log(sd_C)), col = "grey", size = 2) + 
       geom_abline() + 
-      labs(x = "log Mean", y = "log SD") + theme_bw()
+      labs(x = "log Mean", y = "log SD") + theme_bw() + axis_size
 
 p2_2 <-ggplot(data, aes(x = X_T, y = sd_T)) + 
       geom_point(size = 2, col = "black") + 
       geom_point(aes(x = X_C, y = sd_C), col = "grey", size = 2) + 
       geom_abline() + 
-      labs(x = "Mean", y = "SD") + theme_bw()
+      labs(x = "Mean", y = "SD") + theme_bw() +  axis_size
 
-(p1_1 | p2_2) + plot_annotation(tag_levels = "A", tag_suffix = ")")
+supp_plot <- (p1_1 | p2_2) + plot_annotation(tag_levels = "A", tag_suffix = ")") & theme(plot.tag = element_text(size = 24))
+ggsave(plot = supp_plot , filename = "figS1.png", path = "./output/figs", height = 7, width = 10, device = "png", dpi = 600)
+ggsave(plot = supp_plot, filename = "figS1.pdf", path = "./output/figs", height = 7, width = 10, device = "pdf")
 ```
 
 ```{r, tables1,  tab.cap = "Multi-level meta-regression model with log standard deviation (lnSD)"}
