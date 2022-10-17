@@ -658,9 +658,11 @@ plot
 As males and females of a species become more similar in size (i.e., increasing SSD index converging on 0) female fitness is more negatively impacted when increasing male harm (i.e., larger fitness decrease observed in treatment group or a more positive effect size) (unstandardised slope, $\beta_{SSD}$ = `r robust_model1.5_nonZ$beta[4]`, 95% CI = `r robust_model1.5_nonZ$ci.lb[4]` to `r robust_model1.5_nonZ$ci.ub[4]`,  $R^2_{marginal}$ = `r r2_SSD[1]*100`% of effect size variation; Figure \@ref(fig:SSD)). However, the magnitude of slope was marginally non-significant (p = `r p_value(robust_model1.5$pval[4])`). In addition, there was no evidence that the effect of SSD varied according to the type of male harm exhibited (i.e., no interaction between Harm Type and SSD; $\Delta_{AIC_{c}}$ =`r dAICc_ssd_interact`, with the main effects model having the lowest $AIC_{c}$). Interestingly, this pattern qualitatively appears to reverse in species where females are larger than males (i.e., SSD > 0; Figure \@ref(fig:SSD)), however, there is only one species where SSD is greater than 0 (i.e., *Idotea balthica*), making any concrete conclusions premature. 
 
 ```{r SSD, fig.width=11.56944, fig.height=7.62500, fig.cap="Relationship between index of sexual size dimorphism for species (log(male/female)) and effect sizes (i.e., Heteroscedastic Standardised Mean Differences (SMDH)). Note that we provide an estimate of stndardised slope (from a model with z-transformed SSD index), along with 95% CIs and significance. A slope from a model using unstandardised SSD index is plotted along with raw data for ease of interpretation and is provided in text."}
-contrast3top <- paste0("Standardised $\\beta_{SSD}$ = ", round(robust_model1.5$beta[4], digit = 2)) 
-contrast3bottom <- paste0("95% CI: ", round(robust_model1.5$ci.lb[4], digit = 2), " to ", round(robust_model1.5$ci.ub[4], digit = 2))
+    contrast3top <- paste0("Standardised $\\beta_{SSD}$ = ", round(robust_model1.5$beta[4], digit = 2)) 
+ contrast3bottom <- paste0("95% CI: ", round(robust_model1.5$ci.lb[4], digit = 2), " to ", round(robust_model1.5$ci.ub[4], digit = 2))
 contrast3bottom2 <- paste0("p = ", p_value(robust_model1.5$pval[4]))
+
+pred <- predict(robust_model1.5, newmods = cbind(1, 0, 0, scale(seq(from = min(data$SSD_lnRR, na.rm = T), to = max(data$SSD_lnRR, na.rm = T), length.out =100), scale=FALSE)))
 
 p3 = ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDH), colour = Harm_type)) + 
     geom_point(alpha = 0.6) + 
