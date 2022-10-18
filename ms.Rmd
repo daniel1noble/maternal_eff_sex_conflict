@@ -662,10 +662,10 @@ As males and females of a species become more similar in size (i.e., increasing 
  contrast3bottom <- paste0("95% CI: ", round(robust_model1.5$ci.lb[4], digit = 2), " to ", round(robust_model1.5$ci.ub[4], digit = 2))
 contrast3bottom2 <- paste0("p = ", p_value(robust_model1.5$pval[4]))
 
-pred <- predict(robust_model1.5, newmods = cbind(1, 0, 0, scale(seq(from = min(data$SSD_lnRR, na.rm = T), to = max(data$SSD_lnRR, na.rm = T), length.out =100), scale=FALSE)))
+predDat <- data.frame(predict(model1.5_nonZ , newmods = cbind(0, 0, seq(from = min(data$SSD_lnRR, na.rm = T), to = max(data$SSD_lnRR, na.rm = T), length.out = 100)), addx = TRUE))
 
-p3 = ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDH), colour = Harm_type)) + 
-    geom_point(alpha = 0.6) + 
+p3 = ggplot(data, aes(x = SSD_lnRR, y = SMDH)) + 
+    geom_point(aes(size = 1/sqrt(v_SMDH), colour = Harm_type), alpha = 0.6) + 
       theme_classic() + 
   labs(x = "Sexual Size Dimorphism (SSD) Index", 
 	     y = "SMDH",
@@ -676,10 +676,10 @@ p3 = ggplot(data, aes(x = SSD_lnRR, y = SMDH, size = 1/sqrt(v_SMDH), colour = Ha
   annotate('text', x = -0.4, y = 4.5, label = TeX(contrast3top), size = 5) +
   annotate('text', x = -0.4, y = 4.2, label = TeX(contrast3bottom), size = 5) +
   annotate('text', x = -0.4, y = 3.9, label = TeX(contrast3bottom2, italic = TRUE), size = 5) +
-  #geom_smooth(aes(x = SSD_lnRR, y = robust_model1.3_nonZ$ci.lb[1]), method =  "lm", formula = y~x,se = FALSE,lty = "dashed") +
-  #geom_smooth(aes(x = SSD_lnRR, y = robust_model1.3_nonZ$ci.ub[1]), method =  "lm", formula = y~x,se = FALSE, lty ="dashed")
-  #geom_smooth(aes(x = SSD_lnRR, y = robust_model1.3_nonZ$beta[1] + robust_model1.3_nonZ$beta[2]*SSD_lnRR), method =  "lm", formula = y~x, se = FALSE)
-  geom_abline(intercept = robust_model1.3_nonZ$beta[1], slope = robust_model1.3_nonZ$beta[2]) + axis_size# Note using model1.3 for plotting because this is marginalised across Harm_type. 
+  geom_smooth(data = predDat, aes(x = X.SSD_lnRR , y = ci.ub), method =  "lm", formula = y~x,se = FALSE,lty = "dashed", color = "black") +
+  geom_smooth(data = predDat, aes(x = X.SSD_lnRR , y = ci.lb), method =  "lm", formula = y~x,se = FALSE, lty ="dashed", color = "black") +
+  geom_smooth(data = predDat, aes(x = X.SSD_lnRR , y = pred), method =  "lm", formula = y~x, se = FALSE, color = "black")
+  #geom_abline(intercept = robust_model1.3_nonZ$beta[1], slope = robust_model1.3_nonZ$beta[2]) + axis_size# Note using model1.3 for plotting because this is marginalised across Harm_type. 
 
 ggsave(plot = p3, filename = "fig3.png", path = "./output/figs", height = 7, width = 10, device = "png", dpi = 600)
 ggsave(plot = p3, filename = "fig3.pdf", path = "./output/figs", height = 7, width = 10, device = "pdf")
